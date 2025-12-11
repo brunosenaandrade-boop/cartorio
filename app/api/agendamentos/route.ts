@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { z } from 'zod'
+import { enviarEmailNovoAgendamento } from '@/lib/resend'
 
 // Schema de validação para novo agendamento
 const novoAgendamentoSchema = z.object({
@@ -128,6 +129,9 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) throw error
+
+    // Enviar email de notificação (não bloqueia a resposta)
+    enviarEmailNovoAgendamento(novoAgendamento).catch(console.error)
 
     return NextResponse.json(
       { success: true, data: novoAgendamento },

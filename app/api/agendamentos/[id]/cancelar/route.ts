@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { enviarEmailCancelamento } from '@/lib/resend'
 
 export async function PATCH(
   request: NextRequest,
@@ -68,6 +69,9 @@ export async function PATCH(
       .eq('id', id)
 
     if (updateError) throw updateError
+
+    // Enviar email de cancelamento (não bloqueia a resposta)
+    enviarEmailCancelamento(agendamento, cancelled_by).catch(console.error)
 
     return NextResponse.json({ success: true })
   } catch (error) {
