@@ -44,11 +44,23 @@ export async function GET(request: NextRequest) {
       .gte('data', dataInicio)
       .lte('data', dataFim)
 
-    // Buscar agendamentos ativos (filtro de data feito no JavaScript)
-    const { data: agendamentos } = await supabase
+    // Buscar agendamentos ativos
+    const { data: agendamentos, error: agendamentosError } = await supabase
       .from('agendamentos')
       .select('*')
       .eq('status', 'agendado')
+      .gte('data', dataInicio)
+      .lte('data', dataFim)
+
+    // Log para debug
+    console.log('Calendário - Período:', dataInicio, 'até', dataFim)
+    console.log('Agendamentos encontrados:', agendamentos?.length || 0)
+    if (agendamentosError) {
+      console.error('Erro ao buscar agendamentos:', agendamentosError)
+    }
+    if (agendamentos && agendamentos.length > 0) {
+      console.log('Primeiro agendamento:', agendamentos[0])
+    }
 
     // Montar array de dias
     const dias = []
