@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     // Log para debug
     console.log('Calendario API - Query params:', { dataInicio, dataFim })
     console.log('Calendario API - Agendamentos encontrados:', agendamentos?.length || 0)
-    if (agendamentosError) console.error('Calendario API - Erro:', agendamentosError)
+    console.log('Calendario API - Erro na query:', agendamentosError)
 
     // Montar array de dias
     const dias = []
@@ -104,7 +104,9 @@ export async function GET(request: NextRequest) {
         dataInicio,
         dataFim,
         totalAgendamentos: agendamentos?.length || 0,
-        agendamentos: agendamentos || []
+        agendamentos: agendamentos || [],
+        agendamentosError: agendamentosError ? agendamentosError.message : null,
+        timestamp: new Date().toISOString()
       }
     })
   } catch (error) {
