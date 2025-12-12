@@ -70,23 +70,23 @@ export function CalendarioTab() {
       return 'bg-gray-100 text-gray-400'
     }
 
-    // Indisponível
+    // Indisponível (motorista)
     if (dia.indisponivel) {
       return 'bg-gray-100 text-gray-400'
     }
 
-    // Ambos horários livres
+    // Ambos horários livres = DISPONÍVEL (verde)
     if (!dia.agendamentoManha && !dia.agendamentoTarde) {
       return 'bg-green-100 text-green-700 hover:bg-green-200'
     }
 
-    // Um horário ocupado
-    if (dia.agendamentoManha || dia.agendamentoTarde) {
-      return 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+    // Ambos horários ocupados = OCUPADO (vermelho)
+    if (dia.agendamentoManha && dia.agendamentoTarde) {
+      return 'bg-red-100 text-red-700'
     }
 
-    // Ambos ocupados
-    return 'bg-red-100 text-red-700'
+    // Apenas um horário ocupado = PARCIAL (amarelo)
+    return 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
   }
 
   const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
