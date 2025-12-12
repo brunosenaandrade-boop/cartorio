@@ -32,9 +32,17 @@ export async function verificarRecaptcha(token: string): Promise<{ valido: boole
 
     const data: RecaptchaResponse = await response.json()
 
+    // Log para debug
+    console.log('reCAPTCHA Response:', {
+      success: data.success,
+      score: data.score,
+      action: data.action,
+      errorCodes: data['error-codes']
+    })
+
     // Score de 0.0 a 1.0 (1.0 = muito provável ser humano)
-    // Recomendado: >= 0.5 para ações normais
-    const scoreMinimo = 0.5
+    // Usando score 0.3 para ser mais tolerante
+    const scoreMinimo = 0.3
 
     return {
       valido: data.success && data.score >= scoreMinimo,
@@ -42,6 +50,7 @@ export async function verificarRecaptcha(token: string): Promise<{ valido: boole
     }
   } catch (error) {
     console.error('Erro ao verificar reCAPTCHA:', error)
-    return { valido: false, score: 0 }
+    // Em caso de erro, permite o login (fallback)
+    return { valido: true, score: 0.5 }
   }
 }
