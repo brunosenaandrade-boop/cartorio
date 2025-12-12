@@ -5,8 +5,8 @@ import { verificarRecaptcha } from '@/lib/recaptcha'
 // Rate limiting simples em memória
 const tentativas = new Map<string, { count: number; timestamp: number }>()
 
-const LIMITE_TENTATIVAS = 5
-const JANELA_MINUTOS = 1
+const LIMITE_TENTATIVAS = 10
+const JANELA_MINUTOS = 5
 
 function verificarRateLimit(ip: string): boolean {
   const agora = Date.now()
