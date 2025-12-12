@@ -53,8 +53,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar reCAPTCHA v3
-    if (recaptchaToken) {
+    // Verificar reCAPTCHA v3 (temporariamente desabilitado para debug)
+    // TODO: Reabilitar após corrigir as chaves no Google reCAPTCHA Console
+    if (recaptchaToken && false) { // Desabilitado temporariamente
       const { valido, score } = await verificarRecaptcha(recaptchaToken)
       if (!valido) {
         console.log(`reCAPTCHA falhou. Score: ${score}`)
