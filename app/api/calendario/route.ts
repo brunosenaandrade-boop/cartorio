@@ -49,12 +49,10 @@ export async function GET(request: NextRequest) {
       .from('agendamentos')
       .select('*')
 
-    // Buscar agendamentos do mês
+    // Buscar agendamentos do mês - APENAS filtro de status para teste
     const { data: agendamentos, error: agendamentosError } = await supabase
       .from('agendamentos')
       .select('*')
-      .gte('data', dataInicio)
-      .lte('data', dataFim)
       .eq('status', 'agendado')
 
     // Log para debug
