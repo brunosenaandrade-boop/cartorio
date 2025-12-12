@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { buscarTodosFeriados } from '@/lib/feriados'
 
+// Força rota dinâmica (não pré-renderizar)
+export const dynamic = 'force-dynamic'
+
 // Função para formatar data sem problemas de timezone
 function formatarDataLocal(date: Date): string {
   const year = date.getFullYear()
