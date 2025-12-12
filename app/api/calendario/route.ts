@@ -57,15 +57,18 @@ export async function GET(request: NextRequest) {
       .gte('data', dataInicio)
       .lte('data', dataFim)
 
-    // Log para debug
-    console.log('Calendário - Período:', dataInicio, 'até', dataFim)
-    console.log('Agendamentos encontrados:', agendamentos?.length || 0)
+    // Log para debug detalhado
+    console.log('=== DEBUG CALENDARIO ===')
+    console.log('Período:', dataInicio, 'até', dataFim)
+    console.log('Total agendamentos retornados:', agendamentos?.length || 0)
     if (agendamentosError) {
-      console.error('Erro ao buscar agendamentos:', agendamentosError)
+      console.error('ERRO Supabase:', agendamentosError)
     }
-    if (agendamentos && agendamentos.length > 0) {
-      console.log('Primeiro agendamento:', agendamentos[0])
-    }
+    // Listar todos os agendamentos retornados
+    agendamentos?.forEach((a, i) => {
+      console.log(`Agendamento ${i + 1}:`, a.data, a.horario, a.escrevente_nome, a.status)
+    })
+    console.log('========================')
 
     // Montar array de dias
     const dias = []
