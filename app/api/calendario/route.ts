@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { buscarTodosFeriados } from '@/lib/feriados'
 
+// Função para formatar data sem problemas de timezone
+function formatarDataLocal(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -25,19 +33,23 @@ export async function GET(request: NextRequest) {
     // Buscar feriados
     const feriados = await buscarTodosFeriados(ano)
 
+    // Usar formatação local para evitar problemas de timezone
+    const dataInicio = formatarDataLocal(inicioCalendario)
+    const dataFim = formatarDataLocal(fimCalendario)
+
     // Buscar indisponibilidades
     const { data: indisponibilidades } = await supabase
       .from('motorista_indisponibilidades')
       .select('*')
-      .gte('data', inicioCalendario.toISOString().split('T')[0])
-      .lte('data', fimCalendario.toISOString().split('T')[0])
+      .gte('data', dataInicio)
+      .lte('data', dataFim)
 
     // Buscar agendamentos do mês
     const { data: agendamentos } = await supabase
       .from('agendamentos')
       .select('*')
-      .gte('data', inicioCalendario.toISOString().split('T')[0])
-      .lte('data', fimCalendario.toISOString().split('T')[0])
+      .gte('data', dataInicio)
+      .lte('data', dataFim)
       .eq('status', 'agendado')
 
     // Montar array de dias
@@ -45,7 +57,7 @@ export async function GET(request: NextRequest) {
     const dataAtual = new Date(inicioCalendario)
 
     while (dataAtual <= fimCalendario) {
-      const dataStr = dataAtual.toISOString().split('T')[0]
+      const dataStr = formatarDataLocal(dataAtual)
       const diaSemana = dataAtual.getDay()
       const mesAtual = dataAtual.getMonth() + 1 === mes
 

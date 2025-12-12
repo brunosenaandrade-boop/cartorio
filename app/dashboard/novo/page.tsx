@@ -174,8 +174,9 @@ export default function NovoAgendamentoPage() {
     }
   }
 
-  // Data mínima: hoje
-  const dataMinima = new Date().toISOString().split('T')[0]
+  // Data mínima: hoje (usando formato local para evitar problemas de timezone)
+  const hoje = new Date()
+  const dataMinima = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
 
   return (
     <div className="min-h-screen animated-gradient">
