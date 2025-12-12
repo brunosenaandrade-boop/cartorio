@@ -1,7 +1,10 @@
 import { Resend } from 'resend'
 import { Agendamento } from '@/types'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Cliente Resend criado de forma lazy para evitar erro durante build
+function getResendClient(): Resend {
+  return new Resend(process.env.RESEND_API_KEY)
+}
 
 function getFromEmail(): string {
   return process.env.EMAIL_FROM || 'Cartório <noreply@resend.dev>'
@@ -193,7 +196,7 @@ export async function enviarEmailNovoAgendamento(agendamento: Agendamento, email
   `
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResendClient().emails.send({
       from: getFromEmail(),
       to: destinatarios,
       subject: `✅ Novo Agendamento - ${formatarData(agendamento.data)} às ${formatarHorario(agendamento.horario)}`,
@@ -267,7 +270,7 @@ export async function enviarEmailCancelamento(agendamento: Agendamento, motivoCa
   `
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResendClient().emails.send({
       from: getFromEmail(),
       to: destinatarios,
       subject: `❌ Agendamento Cancelado - ${formatarData(agendamento.data)} às ${formatarHorario(agendamento.horario)}`,
@@ -357,7 +360,7 @@ export async function enviarEmailLembrete(agendamento: Agendamento, emailDestina
   `
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResendClient().emails.send({
       from: getFromEmail(),
       to: destinatarios,
       subject: `⏰ Lembrete: Diligência Amanhã - ${formatarData(agendamento.data)} às ${formatarHorario(agendamento.horario)}`,
