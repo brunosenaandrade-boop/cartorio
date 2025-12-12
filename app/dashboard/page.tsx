@@ -57,7 +57,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <Button
                 onClick={handleNovoAgendamento}
-                className="hidden sm:flex"
+                className="hidden sm:flex btn-pulse"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Novo Agendamento
@@ -78,7 +78,7 @@ export default function DashboardPage() {
       {/* Mobile FAB */}
       <button
         onClick={handleNovoAgendamento}
-        className="sm:hidden fixed bottom-6 right-6 z-50 w-14 h-14 bg-primary-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary-600 transition-colors"
+        className="sm:hidden fixed bottom-6 right-6 z-50 w-14 h-14 bg-primary-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary-600 transition-colors btn-pulse"
       >
         <Plus className="w-6 h-6" />
       </button>
