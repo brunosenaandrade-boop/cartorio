@@ -45,12 +45,17 @@ export async function GET(request: NextRequest) {
       .lte('data', dataFim)
 
     // Buscar agendamentos do mês
-    const { data: agendamentos } = await supabase
+    const { data: agendamentos, error: agendamentosError } = await supabase
       .from('agendamentos')
       .select('*')
       .gte('data', dataInicio)
       .lte('data', dataFim)
       .eq('status', 'agendado')
+
+    // Log para debug
+    console.log('Calendario API - Query params:', { dataInicio, dataFim })
+    console.log('Calendario API - Agendamentos encontrados:', agendamentos?.length || 0)
+    if (agendamentosError) console.error('Calendario API - Erro:', agendamentosError)
 
     // Montar array de dias
     const dias = []
@@ -93,7 +98,14 @@ export async function GET(request: NextRequest) {
       success: true,
       dias,
       feriados,
-      indisponibilidades
+      indisponibilidades,
+      // Debug info
+      _debug: {
+        dataInicio,
+        dataFim,
+        totalAgendamentos: agendamentos?.length || 0,
+        agendamentos: agendamentos || []
+      }
     })
   } catch (error) {
     console.error('Erro ao carregar calendário:', error)
