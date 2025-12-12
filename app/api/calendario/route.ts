@@ -106,7 +106,14 @@ export async function GET(request: NextRequest) {
         totalAgendamentos: agendamentos?.length || 0,
         agendamentos: agendamentos || [],
         agendamentosError: agendamentosError ? agendamentosError.message : null,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        // Verificar variáveis de ambiente
+        envCheck: {
+          hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+          hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+          supabaseUrlPrefix: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) || 'NOT_SET'
+        }
       }
     })
   } catch (error) {
