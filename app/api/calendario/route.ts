@@ -44,6 +44,11 @@ export async function GET(request: NextRequest) {
       .gte('data', dataInicio)
       .lte('data', dataFim)
 
+    // TESTE: Buscar TODOS os agendamentos sem filtro
+    const { data: todosAgendamentos, error: testError } = await supabase
+      .from('agendamentos')
+      .select('*')
+
     // Buscar agendamentos do mês
     const { data: agendamentos, error: agendamentosError } = await supabase
       .from('agendamentos')
@@ -113,6 +118,12 @@ export async function GET(request: NextRequest) {
           hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
           hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
           supabaseUrlPrefix: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) || 'NOT_SET'
+        },
+        // Teste: buscar TODOS sem filtro
+        testQuery: {
+          totalSemFiltro: todosAgendamentos?.length || 0,
+          todosAgendamentos: todosAgendamentos || [],
+          testError: testError ? testError.message : null
         }
       }
     })
