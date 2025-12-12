@@ -130,6 +130,16 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error
 
+    // Criar log de agendamento criado
+    await supabase
+      .from('logs')
+      .insert([{
+        acao: 'agendamento_criado',
+        escrevente_nome: novoAgendamento.escrevente_nome,
+        agendamento_id: novoAgendamento.id,
+        detalhes: `Agendamento para ${dados.data} às ${dados.horario}`
+      }])
+
     // Enviar email de notificação (não bloqueia a resposta)
     enviarEmailNovoAgendamento(novoAgendamento).catch(console.error)
 
