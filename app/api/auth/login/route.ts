@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verificarSenha, criarSessao, definirCookieSessao } from '@/lib/auth'
+import { verificarRecaptcha } from '@/lib/recaptcha'
 
 // Rate limiting simples em memória
 const tentativas = new Map<string, { count: number; timestamp: number }>()
@@ -43,13 +44,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { senha } = await request.json()
+    const { senha, recaptchaToken } = await request.json()
 
     if (!senha) {
       return NextResponse.json(
         { error: 'Senha é obrigatória' },
         { status: 400 }
       )
+    }
+
+    // Verificar reCAPTCHA v3
+    if (recaptchaToken) {
+      const { valido, score } = await verificarRecaptcha(recaptchaToken)
+      if (!valido) {
+        console.log(`reCAPTCHA falhou. Score: ${score}`)
+        return NextResponse.json(
+          { error: 'Verificação de segurança falhou. Tente novamente.' },
+          { status: 403 }
+        )
+      }
     }
 
     // Verificar senha
