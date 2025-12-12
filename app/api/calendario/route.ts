@@ -76,6 +76,16 @@ export async function GET(request: NextRequest) {
 
     while (dataAtual <= fimCalendario) {
       const dataStr = formatarDataLocal(dataAtual)
+
+      // Debug: verificar formato de data para dia 15
+      if (dataStr === '2025-12-15' || dataStr === '2025-12-16') {
+        console.log(`Verificando dia ${dataStr}:`)
+        const encontrado = agendamentos?.find(a => {
+          console.log(`  Comparando: a.data="${a.data}" === dataStr="${dataStr}" ? ${a.data === dataStr}`)
+          return a.data === dataStr && a.horario === '09:15'
+        })
+        console.log(`  Resultado: ${encontrado ? 'ENCONTRADO' : 'NÃO ENCONTRADO'}`)
+      }
       const diaSemana = dataAtual.getDay()
       const mesAtual = dataAtual.getMonth() + 1 === mes
 
