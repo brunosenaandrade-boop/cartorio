@@ -44,21 +44,11 @@ export async function GET(request: NextRequest) {
       .gte('data', dataInicio)
       .lte('data', dataFim)
 
-    // TESTE: Buscar TODOS os agendamentos sem filtro
-    const { data: todosAgendamentos, error: testError } = await supabase
-      .from('agendamentos')
-      .select('*')
-
-    // Buscar agendamentos do mês - APENAS filtro de status para teste
-    const { data: agendamentos, error: agendamentosError } = await supabase
+    // Buscar agendamentos ativos (filtro de data feito no JavaScript)
+    const { data: agendamentos } = await supabase
       .from('agendamentos')
       .select('*')
       .eq('status', 'agendado')
-
-    // Log para debug
-    console.log('Calendario API - Query params:', { dataInicio, dataFim })
-    console.log('Calendario API - Agendamentos encontrados:', agendamentos?.length || 0)
-    console.log('Calendario API - Erro na query:', agendamentosError)
 
     // Montar array de dias
     const dias = []
@@ -101,29 +91,7 @@ export async function GET(request: NextRequest) {
       success: true,
       dias,
       feriados,
-      indisponibilidades,
-      // Debug info
-      _debug: {
-        dataInicio,
-        dataFim,
-        totalAgendamentos: agendamentos?.length || 0,
-        agendamentos: agendamentos || [],
-        agendamentosError: agendamentosError ? agendamentosError.message : null,
-        timestamp: new Date().toISOString(),
-        // Verificar variáveis de ambiente
-        envCheck: {
-          hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-          hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-          hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-          supabaseUrlPrefix: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) || 'NOT_SET'
-        },
-        // Teste: buscar TODOS sem filtro
-        testQuery: {
-          totalSemFiltro: todosAgendamentos?.length || 0,
-          todosAgendamentos: todosAgendamentos || [],
-          testError: testError ? testError.message : null
-        }
-      }
+      indisponibilidades
     })
   } catch (error) {
     console.error('Erro ao carregar calendário:', error)
