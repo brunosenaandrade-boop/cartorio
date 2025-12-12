@@ -38,7 +38,7 @@ export interface Recibo {
   agendamento?: Agendamento
 }
 
-export type AcaoLog = 'agendamento_criado' | 'agendamento_cancelado'
+export type AcaoLog = 'agendamento_criado' | 'agendamento_cancelado' | 'agendamento_concluido'
 
 export interface Log {
   id: string
