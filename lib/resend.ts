@@ -3,9 +3,15 @@ import { Agendamento } from '@/types'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const FROM_EMAIL = process.env.EMAIL_FROM || 'Cartório <noreply@resend.dev>'
-const CARTORIO_EMAIL = process.env.CARTORIO_EMAIL || ''
-const MOTORISTA_EMAIL = process.env.MOTORISTA_EMAIL || ''
+function getFromEmail(): string {
+  return process.env.EMAIL_FROM || 'Cartório <noreply@resend.dev>'
+}
+
+function getDestinatarios(): string[] {
+  const cartorioEmail = process.env.CARTORIO_EMAIL || ''
+  const motoristaEmail = process.env.MOTORISTA_EMAIL || ''
+  return [cartorioEmail, motoristaEmail].filter(Boolean)
+}
 
 function formatarData(data: string): string {
   const [ano, mes, dia] = data.split('-')
@@ -141,7 +147,7 @@ export async function enviarEmailNovoAgendamento(agendamento: Agendamento, email
 
   const destinatarios = emailDestinatario
     ? [emailDestinatario]
-    : [CARTORIO_EMAIL, MOTORISTA_EMAIL].filter(Boolean)
+    : getDestinatarios()
 
   if (destinatarios.length === 0) {
     console.log('Nenhum destinatário configurado para email')
@@ -188,7 +194,7 @@ export async function enviarEmailNovoAgendamento(agendamento: Agendamento, email
 
   try {
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: getFromEmail(),
       to: destinatarios,
       subject: `✅ Novo Agendamento - ${formatarData(agendamento.data)} às ${formatarHorario(agendamento.horario)}`,
       html: getEmailTemplate(content, '#2563eb', '📋', 'Novo Agendamento'),
@@ -216,7 +222,7 @@ export async function enviarEmailCancelamento(agendamento: Agendamento, motivoCa
 
   const destinatarios = emailDestinatario
     ? [emailDestinatario]
-    : [CARTORIO_EMAIL, MOTORISTA_EMAIL].filter(Boolean)
+    : getDestinatarios()
 
   if (destinatarios.length === 0) {
     console.log('Nenhum destinatário configurado para email')
@@ -262,7 +268,7 @@ export async function enviarEmailCancelamento(agendamento: Agendamento, motivoCa
 
   try {
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: getFromEmail(),
       to: destinatarios,
       subject: `❌ Agendamento Cancelado - ${formatarData(agendamento.data)} às ${formatarHorario(agendamento.horario)}`,
       html: getEmailTemplate(content, '#dc2626', '🚫', 'Agendamento Cancelado'),
@@ -290,7 +296,7 @@ export async function enviarEmailLembrete(agendamento: Agendamento, emailDestina
 
   const destinatarios = emailDestinatario
     ? [emailDestinatario]
-    : [CARTORIO_EMAIL, MOTORISTA_EMAIL].filter(Boolean)
+    : getDestinatarios()
 
   if (destinatarios.length === 0) {
     console.log('Nenhum destinatário configurado para email')
@@ -352,7 +358,7 @@ export async function enviarEmailLembrete(agendamento: Agendamento, emailDestina
 
   try {
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: getFromEmail(),
       to: destinatarios,
       subject: `⏰ Lembrete: Diligência Amanhã - ${formatarData(agendamento.data)} às ${formatarHorario(agendamento.horario)}`,
       html: getEmailTemplate(content, '#f59e0b', '🔔', 'Lembrete de Diligência'),

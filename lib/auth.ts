@@ -63,7 +63,7 @@ export async function definirCookieSessao(token: string): Promise<void> {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     path: '/',
-    // Expira quando o browser fechar (session cookie)
+    maxAge: 60 * 60 * 24, // 24 horas em segundos (mesma duração do JWT)
   })
 }
 
