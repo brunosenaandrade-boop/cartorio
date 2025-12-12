@@ -59,6 +59,12 @@ export function CalendarioTab() {
       const data = await response.json()
 
       if (data.success) {
+        // Debug: verificar se agendamentos estão vindo
+        const diasComAgendamento = data.dias.filter((d: DiaCalendario) => d.agendamentoManha || d.agendamentoTarde)
+        console.log('Dias com agendamento:', diasComAgendamento.length)
+        diasComAgendamento.forEach((d: DiaCalendario) => {
+          console.log(`Dia ${d.data}: manhã=${!!d.agendamentoManha}, tarde=${!!d.agendamentoTarde}`)
+        })
         setDias(data.dias)
       }
     } catch (error) {
