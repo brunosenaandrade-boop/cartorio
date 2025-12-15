@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { enviarEmailCancelamento } from '@/lib/resend'
+import { notificarCancelamento } from '@/lib/push-notifications'
 
 export async function PATCH(
   request: NextRequest,
@@ -68,6 +70,22 @@ export async function PATCH(
       .eq('id', id)
 
     if (updateError) throw updateError
+
+    // Criar log de cancelamento
+    await supabase
+      .from('logs')
+      .insert([{
+        acao: 'agendamento_cancelado',
+        escrevente_nome: agendamento.escrevente_nome,
+        agendamento_id: agendamento.id,
+        detalhes: `Cancelado por: ${cancelled_by || 'Sistema'}`
+      }])
+
+    // Enviar email de cancelamento (não bloqueia a resposta)
+    enviarEmailCancelamento(agendamento, cancelled_by).catch(console.error)
+
+    // Enviar push notification para o motorista (não bloqueia a resposta)
+    notificarCancelamento(agendamento).catch(console.error)
 
     return NextResponse.json({ success: true })
   } catch (error) {

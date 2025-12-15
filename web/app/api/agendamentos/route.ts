@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { z } from 'zod'
+import { enviarEmailNovoAgendamento } from '@/lib/resend'
+import { notificarNovoAgendamento } from '@/lib/push-notifications'
 
 // Schema de validação para novo agendamento
 const novoAgendamentoSchema = z.object({
@@ -87,6 +89,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Verificar se o horário já passou (para hoje)
+    const hoje = new Date()
+    const hojeString = hoje.toISOString().split('T')[0]
+
+    if (dados.data === hojeString) {
+      const horaAtual = hoje.getHours()
+      const minutoAtual = hoje.getMinutes()
+
+      const [horaAgendamento, minutoAgendamento] = dados.horario.split(':').map(Number)
+
+      const horarioPassou =
+        horaAtual > horaAgendamento ||
+        (horaAtual === horaAgendamento && minutoAtual >= minutoAgendamento)
+
+      if (horarioPassou) {
+        return NextResponse.json(
+          { success: false, error: 'Este horário já passou. Escolha um horário futuro.' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Verificar se a data já passou (dia anterior)
+    if (dados.data < hojeString) {
+      return NextResponse.json(
+        { success: false, error: 'Não é possível agendar em datas passadas' },
+        { status: 400 }
+      )
+    }
+
     // Verificar se motorista está disponível
     const { data: indisponibilidade } = await supabase
       .from('motorista_indisponibilidades')
@@ -128,6 +160,22 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) throw error
+
+    // Criar log de agendamento criado
+    await supabase
+      .from('logs')
+      .insert([{
+        acao: 'agendamento_criado',
+        escrevente_nome: novoAgendamento.escrevente_nome,
+        agendamento_id: novoAgendamento.id,
+        detalhes: `Agendamento para ${dados.data} às ${dados.horario}`
+      }])
+
+    // Enviar email de notificação (não bloqueia a resposta)
+    enviarEmailNovoAgendamento(novoAgendamento).catch(console.error)
+
+    // Enviar push notification para o motorista (não bloqueia a resposta)
+    notificarNovoAgendamento(novoAgendamento).catch(console.error)
 
     return NextResponse.json(
       { success: true, data: novoAgendamento },

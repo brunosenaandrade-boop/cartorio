@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { buscarTodosFeriados } from '@/lib/feriados'
 
+// Força rota dinâmica (não pré-renderizar)
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const fetchCache = 'force-no-store'
+
+// Função para formatar data sem problemas de timezone
+function formatarDataLocal(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -25,27 +38,54 @@ export async function GET(request: NextRequest) {
     // Buscar feriados
     const feriados = await buscarTodosFeriados(ano)
 
+    // Usar formatação local para evitar problemas de timezone
+    const dataInicio = formatarDataLocal(inicioCalendario)
+    const dataFim = formatarDataLocal(fimCalendario)
+
     // Buscar indisponibilidades
     const { data: indisponibilidades } = await supabase
       .from('motorista_indisponibilidades')
       .select('*')
-      .gte('data', inicioCalendario.toISOString().split('T')[0])
-      .lte('data', fimCalendario.toISOString().split('T')[0])
+      .gte('data', dataInicio)
+      .lte('data', dataFim)
 
-    // Buscar agendamentos do mês
-    const { data: agendamentos } = await supabase
+    // Buscar agendamentos ativos
+    const { data: agendamentos, error: agendamentosError } = await supabase
       .from('agendamentos')
       .select('*')
-      .gte('data', inicioCalendario.toISOString().split('T')[0])
-      .lte('data', fimCalendario.toISOString().split('T')[0])
       .eq('status', 'agendado')
+      .gte('data', dataInicio)
+      .lte('data', dataFim)
+
+    // Log para debug detalhado
+    console.log('=== DEBUG CALENDARIO ===')
+    console.log('Período:', dataInicio, 'até', dataFim)
+    console.log('Total agendamentos retornados:', agendamentos?.length || 0)
+    if (agendamentosError) {
+      console.error('ERRO Supabase:', agendamentosError)
+    }
+    // Listar todos os agendamentos retornados
+    agendamentos?.forEach((a, i) => {
+      console.log(`Agendamento ${i + 1}:`, a.data, a.horario, a.escrevente_nome, a.status)
+    })
+    console.log('========================')
 
     // Montar array de dias
     const dias = []
     const dataAtual = new Date(inicioCalendario)
 
     while (dataAtual <= fimCalendario) {
-      const dataStr = dataAtual.toISOString().split('T')[0]
+      const dataStr = formatarDataLocal(dataAtual)
+
+      // Debug: verificar formato de data para dia 15
+      if (dataStr === '2025-12-15' || dataStr === '2025-12-16') {
+        console.log(`Verificando dia ${dataStr}:`)
+        const encontrado = agendamentos?.find(a => {
+          console.log(`  Comparando: a.data="${a.data}" === dataStr="${dataStr}" ? ${a.data === dataStr}`)
+          return a.data === dataStr && a.horario === '09:15'
+        })
+        console.log(`  Resultado: ${encontrado ? 'ENCONTRADO' : 'NÃO ENCONTRADO'}`)
+      }
       const diaSemana = dataAtual.getDay()
       const mesAtual = dataAtual.getMonth() + 1 === mes
 
@@ -77,12 +117,19 @@ export async function GET(request: NextRequest) {
       dataAtual.setDate(dataAtual.getDate() + 1)
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       dias,
       feriados,
       indisponibilidades
     })
+
+    // Desabilitar cache completamente
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+
+    return response
   } catch (error) {
     console.error('Erro ao carregar calendário:', error)
     return NextResponse.json(

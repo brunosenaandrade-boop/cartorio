@@ -123,10 +123,28 @@ export default function NovoAgendamentoPage() {
 
     // Verificar se não é data passada
     const hoje = new Date()
-    hoje.setHours(0, 0, 0, 0)
-    if (dataSelecionada < hoje) {
+    const hojeZerado = new Date()
+    hojeZerado.setHours(0, 0, 0, 0)
+    if (dataSelecionada < hojeZerado) {
       setErro('Não é possível agendar em datas passadas')
       return false
+    }
+
+    // Verificar se o horário já passou (para hoje)
+    const hojeString = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
+    if (formData.data === hojeString) {
+      const horaAtual = hoje.getHours()
+      const minutoAtual = hoje.getMinutes()
+      const [horaAgendamento, minutoAgendamento] = formData.horario.split(':').map(Number)
+
+      const horarioPassou =
+        horaAtual > horaAgendamento ||
+        (horaAtual === horaAgendamento && minutoAtual >= minutoAgendamento)
+
+      if (horarioPassou) {
+        setErro('Este horário já passou. Escolha um horário futuro.')
+        return false
+      }
     }
 
     setErro('')
@@ -174,8 +192,9 @@ export default function NovoAgendamentoPage() {
     }
   }
 
-  // Data mínima: hoje
-  const dataMinima = new Date().toISOString().split('T')[0]
+  // Data mínima: hoje (usando formato local para evitar problemas de timezone)
+  const hoje = new Date()
+  const dataMinima = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
 
   return (
     <div className="min-h-screen animated-gradient">

@@ -37,7 +37,7 @@ export async function criarSessao(): Promise<string> {
 export async function verificarSessao(token: string): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET)
-    return payload as SessionPayload
+    return payload as unknown as SessionPayload
   } catch {
     return null
   }
@@ -63,7 +63,7 @@ export async function definirCookieSessao(token: string): Promise<void> {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     path: '/',
-    // Expira quando o browser fechar (session cookie)
+    maxAge: 60 * 60 * 24, // 24 horas em segundos (mesma duração do JWT)
   })
 }
 
