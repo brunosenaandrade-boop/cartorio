@@ -44,23 +44,31 @@ export function RecibosTab() {
     }
   }
 
+  const [downloading, setDownloading] = useState<string | null>(null)
+
   const handleDownload = async (reciboId: string) => {
+    setDownloading(reciboId)
     try {
       const response = await fetch(`/api/recibos/${reciboId}/pdf`)
 
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `recibo-${reciboId}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
+      if (!response.ok) {
+        throw new Error('Erro ao gerar PDF')
       }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `recibo-${reciboId.slice(0, 8)}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
     } catch (error) {
       console.error('Erro ao baixar recibo:', error)
+      alert('Erro ao gerar PDF. Tente novamente.')
+    } finally {
+      setDownloading(null)
     }
   }
 
@@ -121,9 +129,19 @@ export function RecibosTab() {
                   <Button
                     onClick={() => handleDownload(recibo.id)}
                     size="sm"
+                    disabled={downloading === recibo.id}
                   >
-                    <Download className="w-4 h-4 mr-2" />
-                    PDF
+                    {downloading === recibo.id ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Gerando...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        PDF
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
