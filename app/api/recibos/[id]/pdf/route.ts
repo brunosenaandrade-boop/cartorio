@@ -55,8 +55,8 @@ export async function GET(
     // Gerar PDF como buffer (compatível com serverless)
     const pdfBuffer = await renderToBuffer(doc as React.ReactElement)
 
-    // Retornar PDF real
-    return new NextResponse(pdfBuffer, {
+    // Retornar PDF real (converter Buffer para Uint8Array)
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="recibo-${id.slice(0, 8)}.pdf"`,
