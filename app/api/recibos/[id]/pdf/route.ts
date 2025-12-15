@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { pdf } from '@react-pdf/renderer'
+import { renderToBuffer } from '@react-pdf/renderer'
 import { ReciboPDF } from '@/lib/pdf-template'
 import React from 'react'
 
@@ -52,16 +52,15 @@ export async function GET(
       }
     })
 
-    // Gerar PDF como blob
-    const pdfBlob = await pdf(doc as React.ReactElement).toBlob()
-    const pdfBuffer = await pdfBlob.arrayBuffer()
+    // Gerar PDF como buffer (compatível com serverless)
+    const pdfBuffer = await renderToBuffer(doc as React.ReactElement)
 
     // Retornar PDF real
     return new NextResponse(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="recibo-${id.slice(0, 8)}.pdf"`,
-        'Content-Length': pdfBuffer.byteLength.toString()
+        'Content-Length': pdfBuffer.length.toString()
       }
     })
   } catch (error) {
