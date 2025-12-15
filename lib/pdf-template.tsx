@@ -4,15 +4,8 @@ import {
   Page,
   Text,
   View,
-  StyleSheet,
-  Font
+  StyleSheet
 } from '@react-pdf/renderer'
-
-// Registrar fonte cursiva para assinatura (Great Vibes - estilo manuscrito elegante)
-Font.register({
-  family: 'GreatVibes',
-  src: 'https://fonts.gstatic.com/s/greatvibes/v18/RWmMoKWR9v4ksMfaWd_JN9XFiaQ.ttf'
-})
 
 const styles = StyleSheet.create({
   page: {
@@ -130,8 +123,8 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   assinaturaCursiva: {
-    fontFamily: 'GreatVibes',
-    fontSize: 36,
+    fontFamily: 'Times-Italic',
+    fontSize: 28,
     color: '#1a365d',
     marginBottom: 5
   },
