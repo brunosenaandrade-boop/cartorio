@@ -75,8 +75,13 @@ export async function POST(request: NextRequest) {
 
     // Normalizar horário antes de validar (garante formato HH:MM)
     if (body.horario) {
-      body.horario = normalizarHorario(body.horario)
-      console.log('[AGENDAMENTO] Horário normalizado:', body.horario)
+      const horarioOriginal = body.horario
+      const horarioNormalizado = normalizarHorario(body.horario)
+      // Só substitui se a normalização retornar algo válido
+      if (horarioNormalizado) {
+        body.horario = horarioNormalizado
+      }
+      console.log('[AGENDAMENTO] Horário original:', horarioOriginal, '-> normalizado:', body.horario)
     }
 
     // Validar dados
