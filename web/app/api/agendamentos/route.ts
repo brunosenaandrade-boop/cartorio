@@ -110,13 +110,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se o horário já passou (para hoje)
-    // Usar hora local do Brasil (não UTC) para evitar problemas de timezone
-    const hoje = new Date()
-    const hojeString = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
+    // Usar hora local do Brasil (UTC-3) para evitar problemas de timezone
+    const agora = new Date()
+    // Converter para horário de Brasília (UTC-3)
+    const horasBrasil = new Date(agora.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
+    const hojeString = `${horasBrasil.getFullYear()}-${String(horasBrasil.getMonth() + 1).padStart(2, '0')}-${String(horasBrasil.getDate()).padStart(2, '0')}`
 
     if (dados.data === hojeString) {
-      const horaAtual = hoje.getHours()
-      const minutoAtual = hoje.getMinutes()
+      const horaAtual = horasBrasil.getHours()
+      const minutoAtual = horasBrasil.getMinutes()
 
       const [horaAgendamento, minutoAgendamento] = dados.horario.split(':').map(Number)
 
