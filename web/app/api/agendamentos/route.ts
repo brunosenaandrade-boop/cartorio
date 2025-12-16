@@ -110,15 +110,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se o horário já passou (para hoje)
-    // Usar hora local do Brasil (UTC-3) para evitar problemas de timezone
+    // Usar hora local do Brasil (UTC-3) - cálculo manual para compatibilidade
     const agora = new Date()
-    // Converter para horário de Brasília (UTC-3)
-    const horasBrasil = new Date(agora.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
-    const hojeString = `${horasBrasil.getFullYear()}-${String(horasBrasil.getMonth() + 1).padStart(2, '0')}-${String(horasBrasil.getDate()).padStart(2, '0')}`
+    // Brasília = UTC-3 (3 horas a menos que UTC)
+    const offsetBrasilia = -3 * 60 // em minutos
+    const offsetLocal = agora.getTimezoneOffset() // em minutos (positivo para oeste de UTC)
+    const diffMinutos = offsetLocal + offsetBrasilia
+    const horasBrasil = new Date(agora.getTime() + diffMinutos * 60 * 1000)
+
+    const hojeString = `${horasBrasil.getUTCFullYear()}-${String(horasBrasil.getUTCMonth() + 1).padStart(2, '0')}-${String(horasBrasil.getUTCDate()).padStart(2, '0')}`
 
     if (dados.data === hojeString) {
-      const horaAtual = horasBrasil.getHours()
-      const minutoAtual = horasBrasil.getMinutes()
+      const horaAtual = horasBrasil.getUTCHours()
+      const minutoAtual = horasBrasil.getUTCMinutes()
 
       const [horaAgendamento, minutoAgendamento] = dados.horario.split(':').map(Number)
 
