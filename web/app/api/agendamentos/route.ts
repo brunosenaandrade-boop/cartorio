@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
 
 // POST - Criar novo agendamento
 export async function POST(request: NextRequest) {
+  console.log('[AGENDAMENTO] Iniciando POST...')
   try {
     const body = await request.json()
     console.log('[AGENDAMENTO] Dados recebidos:', JSON.stringify(body))
@@ -147,12 +148,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se motorista está disponível
-    // Usar maybeSingle() ao invés de single() para não lançar erro quando não encontrar
-    const { data: indisponibilidade } = await supabase
+    console.log('[AGENDAMENTO] Verificando indisponibilidade...')
+    const { data: indisponibilidade, error: errIndispo } = await supabase
       .from('motorista_indisponibilidades')
       .select('id')
       .eq('data', dados.data)
       .maybeSingle()
+
+    if (errIndispo) {
+      console.error('[AGENDAMENTO] Erro ao verificar indisponibilidade:', errIndispo)
+    }
 
     if (indisponibilidade) {
       return NextResponse.json(
@@ -162,14 +167,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se horário já está ocupado
-    // Usar maybeSingle() ao invés de single() para não lançar erro quando não encontrar
-    const { data: agendamentoExistente } = await supabase
+    console.log('[AGENDAMENTO] Verificando horário ocupado...')
+    const { data: agendamentoExistente, error: errExistente } = await supabase
       .from('agendamentos')
       .select('id')
       .eq('data', dados.data)
       .eq('horario', dados.horario)
       .eq('status', 'agendado')
       .maybeSingle()
+
+    if (errExistente) {
+      console.error('[AGENDAMENTO] Erro ao verificar existente:', errExistente)
+    }
 
     if (agendamentoExistente) {
       return NextResponse.json(
@@ -179,7 +188,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Criar agendamento
-    console.log('[AGENDAMENTO] Inserindo no banco...')
+    console.log('[AGENDAMENTO] Inserindo no banco...', JSON.stringify({ ...dados, status: 'agendado' }))
     const { data: novoAgendamento, error } = await supabase
       .from('agendamentos')
       .insert([{
@@ -190,7 +199,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('[AGENDAMENTO] Erro do Supabase:', error)
+      console.error('[AGENDAMENTO] Erro do Supabase ao inserir:', JSON.stringify(error))
       throw error
     }
 
