@@ -18,9 +18,11 @@ export type HorarioDisponivel = typeof HORARIOS_DISPONIVEIS[number]
 
 // Normalizar horário para formato HH:MM (com zero à esquerda)
 export function normalizarHorario(horario: string): string {
-  if (!horario) return ''
-  const [hora, minuto] = horario.split(':')
-  return `${hora.padStart(2, '0')}:${minuto.padStart(2, '0')}`
+  if (!horario || !horario.includes(':')) return ''
+  const partes = horario.split(':')
+  if (partes.length < 2) return ''
+  const [hora, minuto] = partes
+  return `${hora.padStart(2, '0')}:${(minuto || '00').padStart(2, '0')}`
 }
 
 // Verificar se horário é válido (está na lista de horários disponíveis)
