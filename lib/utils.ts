@@ -1,6 +1,27 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
+// Horários disponíveis para agendamento
+export const HORARIOS_MANHA = [
+  '08:45', '09:00', '09:15', '09:30', '09:45', '10:00',
+  '10:15', '10:30', '10:45', '11:00', '11:15', '11:30'
+] as const
+
+export const HORARIOS_TARDE = [
+  '14:00', '14:15', '14:30', '14:45', '15:00', '15:15',
+  '15:30', '15:45', '16:00', '16:15', '16:30', '16:45'
+] as const
+
+export const HORARIOS_DISPONIVEIS = [...HORARIOS_MANHA, ...HORARIOS_TARDE] as const
+
+export type HorarioDisponivel = typeof HORARIOS_DISPONIVEIS[number]
+
+// Determinar período do horário
+export function getPeriodo(horario: string): 'Manhã' | 'Tarde' {
+  const hora = parseInt(horario.split(':')[0])
+  return hora < 12 ? 'Manhã' : 'Tarde'
+}
+
 // Utility para combinar classes do Tailwind
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -78,11 +99,18 @@ export function podeCancelar(data: string, horario: string): boolean {
   return agora < horarioLimite
 }
 
-// Gerar horário limite de cancelamento
+// Gerar horário limite de cancelamento (30 min antes)
 export function getHorarioLimiteCancelamento(horario: string): string {
-  if (horario === '09:15') return '08:45'
-  if (horario === '15:00') return '14:30'
-  return ''
+  const [hora, minuto] = horario.split(':').map(Number)
+  let novaHora = hora
+  let novoMinuto = minuto - 30
+
+  if (novoMinuto < 0) {
+    novoMinuto += 60
+    novaHora -= 1
+  }
+
+  return `${novaHora.toString().padStart(2, '0')}:${novoMinuto.toString().padStart(2, '0')}`
 }
 
 // Verificar se data é hoje
