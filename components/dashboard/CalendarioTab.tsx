@@ -15,7 +15,7 @@ import {
   PartyPopper
 } from 'lucide-react'
 import { Button } from '@/components/ui'
-import { getNomeMes, formatarData } from '@/lib/utils'
+import { getNomeMes, formatarData, HORARIOS_MANHA, HORARIOS_TARDE, HORARIOS_DISPONIVEIS } from '@/lib/utils'
 import { Agendamento, MotoristaIndisponibilidade, Feriado } from '@/types'
 
 interface DiaCalendario {
@@ -23,8 +23,11 @@ interface DiaCalendario {
   dia: number
   mesAtual: boolean
   diaSemana: number
-  agendamentoManha?: Agendamento
-  agendamentoTarde?: Agendamento
+  agendamentosDoDia: Agendamento[]
+  horariosOcupados: string[]
+  horariosDisponiveis: string[]
+  totalSlots: number
+  slotsDisponiveis: number
   feriado?: Feriado
   indisponivel?: MotoristaIndisponibilidade
 }
@@ -59,12 +62,6 @@ export function CalendarioTab() {
       const data = await response.json()
 
       if (data.success) {
-        // Debug: verificar se agendamentos estão vindo
-        const diasComAgendamento = data.dias.filter((d: DiaCalendario) => d.agendamentoManha || d.agendamentoTarde)
-        console.log('Dias com agendamento:', diasComAgendamento.length)
-        diasComAgendamento.forEach((d: DiaCalendario) => {
-          console.log(`Dia ${d.data}: manhã=${!!d.agendamentoManha}, tarde=${!!d.agendamentoTarde}`)
-        })
         setDias(data.dias)
       }
     } catch (error) {
@@ -113,6 +110,22 @@ export function CalendarioTab() {
     return false
   }
 
+  // Calcula slots disponíveis considerando horários que já passaram (para hoje)
+  const getSlotsDisponiveis = (dia: DiaCalendario): number => {
+    if (!dia.mesAtual || dia.feriado || dia.indisponivel || dia.diaSemana === 0 || dia.diaSemana === 6) {
+      return 0
+    }
+    if (isDataPassada(dia.data)) {
+      return 0
+    }
+
+    // Filtrar horários disponíveis que ainda não passaram
+    const horariosAindaDisponiveis = dia.horariosDisponiveis.filter(
+      horario => !isHorarioPassado(dia.data, horario)
+    )
+    return horariosAindaDisponiveis.length
+  }
+
   const getCorDia = (dia: DiaCalendario) => {
     // Data passada - sempre cinza escuro
     if (dia.mesAtual && isDataPassada(dia.data)) {
@@ -134,25 +147,20 @@ export function CalendarioTab() {
       return 'bg-gray-100 text-gray-500'
     }
 
-    // Verificar se horários já passaram (para hoje)
-    const manhaPassou = isHorarioPassado(dia.data, '09:15')
-    const tardePassou = isHorarioPassado(dia.data, '15:00')
+    const slotsLivres = getSlotsDisponiveis(dia)
+    const totalSlots = dia.totalSlots || HORARIOS_DISPONIVEIS.length
 
-    // Slot ocupado = tem agendamento OU já passou
-    const manhaOcupada = dia.agendamentoManha || manhaPassou
-    const tardeOcupada = dia.agendamentoTarde || tardePassou
-
-    // Ambos horários livres = DISPONÍVEL (verde)
-    if (!manhaOcupada && !tardeOcupada) {
+    // Todos os slots livres = DISPONÍVEL (verde)
+    if (slotsLivres === totalSlots) {
       return 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:shadow-md transition-all'
     }
 
-    // Ambos horários ocupados = OCUPADO (vermelho)
-    if (manhaOcupada && tardeOcupada) {
+    // Nenhum slot livre = LOTADO (vermelho)
+    if (slotsLivres === 0) {
       return 'bg-rose-50 text-rose-700'
     }
 
-    // Apenas um horário ocupado = PARCIAL (amarelo/laranja)
+    // Alguns slots livres = PARCIAL (amarelo/laranja)
     return 'bg-amber-50 text-amber-700 hover:bg-amber-100 hover:shadow-md transition-all'
   }
 
@@ -165,16 +173,11 @@ export function CalendarioTab() {
       return { label: '', slots: 0 }
     }
 
-    // Verificar se horários já passaram (para hoje)
-    const manhaPassou = isHorarioPassado(dia.data, '09:15')
-    const tardePassou = isHorarioPassado(dia.data, '15:00')
-
-    // Slot só está livre se não tem agendamento E não passou
-    const manhaLivre = !dia.agendamentoManha && !manhaPassou
-    const tardeLivre = !dia.agendamentoTarde && !tardePassou
-
-    const slotsLivres = (manhaLivre ? 1 : 0) + (tardeLivre ? 1 : 0)
-    return { label: slotsLivres > 0 ? `${slotsLivres} vaga${slotsLivres > 1 ? 's' : ''}` : 'Lotado', slots: slotsLivres }
+    const slotsLivres = getSlotsDisponiveis(dia)
+    return {
+      label: slotsLivres > 0 ? `${slotsLivres} vaga${slotsLivres > 1 ? 's' : ''}` : 'Lotado',
+      slots: slotsLivres
+    }
   }
 
   const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -290,56 +293,56 @@ export function CalendarioTab() {
                     {status.slots > 0 && !passado && (
                       <span className={`
                         text-[10px] font-bold px-1.5 py-0.5 rounded-full
-                        ${status.slots === 2 ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}
+                        ${status.slots === HORARIOS_DISPONIVEIS.length ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}
                       `}>
                         {status.slots}
                       </span>
                     )}
                   </div>
 
-                  {/* Slots de horário - Apenas para dias futuros úteis */}
+                  {/* Resumo de slots - Apenas para dias futuros úteis */}
                   {dia.mesAtual && !passado && !dia.feriado && !dia.indisponivel && ehDiaUtil && (
-                    <div className="space-y-1.5">
-                      {/* Slot manhã */}
+                    <div className="space-y-1">
+                      {/* Slots manhã */}
                       {(() => {
-                        const manhaPassou = isHorarioPassado(dia.data, '09:15')
-                        const manhaOcupada = dia.agendamentoManha || manhaPassou
+                        const slotsManha = HORARIOS_MANHA.filter(
+                          h => !dia.horariosOcupados.includes(h) && !isHorarioPassado(dia.data, h)
+                        ).length
+                        const totalManha = HORARIOS_MANHA.length
                         return (
                           <div className={`
-                            flex items-center gap-1.5 text-xs rounded-lg px-2 py-1 font-medium
-                            transition-all duration-200
-                            ${manhaOcupada
-                              ? 'bg-rose-100/80 text-rose-700 line-through opacity-60'
-                              : 'bg-emerald-100 text-emerald-700 shadow-sm'
+                            flex items-center gap-1 text-[10px] rounded px-1.5 py-0.5 font-medium
+                            ${slotsManha === 0
+                              ? 'bg-rose-100/80 text-rose-600'
+                              : slotsManha === totalManha
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-amber-100 text-amber-700'
                             }
                           `}>
-                            <Sun className="w-3.5 h-3.5" />
-                            <span>09:15</span>
-                            {!manhaOcupada && (
-                              <CheckCircle2 className="w-3 h-3 ml-auto" />
-                            )}
+                            <Sun className="w-3 h-3" />
+                            <span>{slotsManha}/{totalManha}</span>
                           </div>
                         )
                       })()}
 
-                      {/* Slot tarde */}
+                      {/* Slots tarde */}
                       {(() => {
-                        const tardePassou = isHorarioPassado(dia.data, '15:00')
-                        const tardeOcupada = dia.agendamentoTarde || tardePassou
+                        const slotsTarde = HORARIOS_TARDE.filter(
+                          h => !dia.horariosOcupados.includes(h) && !isHorarioPassado(dia.data, h)
+                        ).length
+                        const totalTarde = HORARIOS_TARDE.length
                         return (
                           <div className={`
-                            flex items-center gap-1.5 text-xs rounded-lg px-2 py-1 font-medium
-                            transition-all duration-200
-                            ${tardeOcupada
-                              ? 'bg-rose-100/80 text-rose-700 line-through opacity-60'
-                              : 'bg-emerald-100 text-emerald-700 shadow-sm'
+                            flex items-center gap-1 text-[10px] rounded px-1.5 py-0.5 font-medium
+                            ${slotsTarde === 0
+                              ? 'bg-rose-100/80 text-rose-600'
+                              : slotsTarde === totalTarde
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-amber-100 text-amber-700'
                             }
                           `}>
-                            <Moon className="w-3.5 h-3.5" />
-                            <span>15:00</span>
-                            {!tardeOcupada && (
-                              <CheckCircle2 className="w-3 h-3 ml-auto" />
-                            )}
+                            <Moon className="w-3 h-3" />
+                            <span>{slotsTarde}/{totalTarde}</span>
                           </div>
                         )
                       })()}

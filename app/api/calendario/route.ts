@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { buscarTodosFeriados } from '@/lib/feriados'
+import { HORARIOS_DISPONIVEIS } from '@/lib/utils'
 
 // Força rota dinâmica (não pré-renderizar)
 export const dynamic = 'force-dynamic'
@@ -57,18 +58,9 @@ export async function GET(request: NextRequest) {
       .gte('data', dataInicio)
       .lte('data', dataFim)
 
-    // Log para debug detalhado
-    console.log('=== DEBUG CALENDARIO ===')
-    console.log('Período:', dataInicio, 'até', dataFim)
-    console.log('Total agendamentos retornados:', agendamentos?.length || 0)
     if (agendamentosError) {
       console.error('ERRO Supabase:', agendamentosError)
     }
-    // Listar todos os agendamentos retornados
-    agendamentos?.forEach((a, i) => {
-      console.log(`Agendamento ${i + 1}:`, a.data, a.horario, a.escrevente_nome, a.status)
-    })
-    console.log('========================')
 
     // Montar array de dias
     const dias = []
@@ -77,15 +69,6 @@ export async function GET(request: NextRequest) {
     while (dataAtual <= fimCalendario) {
       const dataStr = formatarDataLocal(dataAtual)
 
-      // Debug: verificar formato de data para dia 15
-      if (dataStr === '2025-12-15' || dataStr === '2025-12-16') {
-        console.log(`Verificando dia ${dataStr}:`)
-        const encontrado = agendamentos?.find(a => {
-          console.log(`  Comparando: a.data="${a.data}" === dataStr="${dataStr}" ? ${a.data === dataStr}`)
-          return a.data === dataStr && a.horario === '09:15'
-        })
-        console.log(`  Resultado: ${encontrado ? 'ENCONTRADO' : 'NÃO ENCONTRADO'}`)
-      }
       const diaSemana = dataAtual.getDay()
       const mesAtual = dataAtual.getMonth() + 1 === mes
 
@@ -95,13 +78,10 @@ export async function GET(request: NextRequest) {
       // Encontrar indisponibilidade
       const indisponivel = indisponibilidades?.find(i => i.data === dataStr)
 
-      // Encontrar agendamentos
-      const agendamentoManha = agendamentos?.find(
-        a => a.data === dataStr && a.horario === '09:15'
-      )
-      const agendamentoTarde = agendamentos?.find(
-        a => a.data === dataStr && a.horario === '15:00'
-      )
+      // Encontrar agendamentos do dia
+      const agendamentosDoDia = agendamentos?.filter(a => a.data === dataStr) || []
+      const horariosOcupados = agendamentosDoDia.map(a => a.horario)
+      const horariosDisponiveis = HORARIOS_DISPONIVEIS.filter(h => !horariosOcupados.includes(h))
 
       dias.push({
         data: dataStr,
@@ -110,8 +90,11 @@ export async function GET(request: NextRequest) {
         diaSemana,
         feriado,
         indisponivel,
-        agendamentoManha,
-        agendamentoTarde
+        agendamentosDoDia,
+        horariosOcupados,
+        horariosDisponiveis,
+        totalSlots: HORARIOS_DISPONIVEIS.length,
+        slotsDisponiveis: horariosDisponiveis.length
       })
 
       dataAtual.setDate(dataAtual.getDate() + 1)
