@@ -236,7 +236,8 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: `Erro ao criar agendamento: ${errorMessage}`,
-        details: supabaseError.code || supabaseError.details || undefined
+        details: supabaseError.code || supabaseError.details || undefined,
+        _v: 'v3'
       },
       { status: 500 }
     )
