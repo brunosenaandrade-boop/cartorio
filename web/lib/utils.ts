@@ -16,6 +16,19 @@ export const HORARIOS_DISPONIVEIS = [...HORARIOS_MANHA, ...HORARIOS_TARDE] as co
 
 export type HorarioDisponivel = typeof HORARIOS_DISPONIVEIS[number]
 
+// Normalizar horário para formato HH:MM (com zero à esquerda)
+export function normalizarHorario(horario: string): string {
+  if (!horario) return ''
+  const [hora, minuto] = horario.split(':')
+  return `${hora.padStart(2, '0')}:${minuto.padStart(2, '0')}`
+}
+
+// Verificar se horário é válido (está na lista de horários disponíveis)
+export function isHorarioValido(horario: string): boolean {
+  const normalizado = normalizarHorario(horario)
+  return HORARIOS_DISPONIVEIS.includes(normalizado as HorarioDisponivel)
+}
+
 // Determinar período do horário
 export function getPeriodo(horario: string): 'Manhã' | 'Tarde' {
   const hora = parseInt(horario.split(':')[0])

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { Button, Input, Textarea, Card, CardContent, TimeSlotPicker } from '@/components/ui'
 import { buscarCEP } from '@/lib/viacep'
-import { formatarCEP, formatarData, getPeriodo, HORARIOS_DISPONIVEIS } from '@/lib/utils'
+import { formatarCEP, formatarData, getPeriodo, HORARIOS_DISPONIVEIS, normalizarHorario, isHorarioValido } from '@/lib/utils'
 import { NovoAgendamentoForm, HorarioDisponivel } from '@/types'
 
 type Etapa = 'formulario' | 'confirmar' | 'sucesso'
@@ -55,10 +55,19 @@ function NovoAgendamentoContent() {
     const horarioParam = searchParams.get('horario')
 
     if (dataParam || horarioParam) {
+      // Normalizar e validar horário da URL
+      let horarioNormalizado = ''
+      if (horarioParam) {
+        const normalizado = normalizarHorario(horarioParam)
+        if (isHorarioValido(normalizado)) {
+          horarioNormalizado = normalizado
+        }
+      }
+
       setFormData(prev => ({
         ...prev,
         data: dataParam || prev.data,
-        horario: (horarioParam as HorarioDisponivel) || prev.horario
+        horario: (horarioNormalizado as HorarioDisponivel) || prev.horario
       }))
       setUrlParamsProcessed(true)
     }

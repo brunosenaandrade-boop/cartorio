@@ -3,6 +3,7 @@ import { createServerClient } from '@/lib/supabase'
 import { z } from 'zod'
 import { enviarEmailNovoAgendamento } from '@/lib/resend'
 import { notificarNovoAgendamento } from '@/lib/push-notifications'
+import { normalizarHorario } from '@/lib/utils'
 
 // Schema de validação para novo agendamento
 const novoAgendamentoSchema = z.object({
@@ -70,6 +71,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+
+    // Normalizar horário antes de validar (garante formato HH:MM)
+    if (body.horario) {
+      body.horario = normalizarHorario(body.horario)
+    }
 
     // Validar dados
     const validacao = novoAgendamentoSchema.safeParse(body)

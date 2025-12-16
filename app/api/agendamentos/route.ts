@@ -3,12 +3,18 @@ import { createServerClient } from '@/lib/supabase'
 import { z } from 'zod'
 import { enviarEmailNovoAgendamento } from '@/lib/resend'
 import { notificarNovoAgendamento } from '@/lib/push-notifications'
+import { normalizarHorario } from '@/lib/utils'
 
 // Schema de validação para novo agendamento
 const novoAgendamentoSchema = z.object({
   escrevente_nome: z.string().min(1, 'Nome do escrevente é obrigatório'),
   data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida'),
-  horario: z.enum(['09:15', '15:00'], { message: 'Horário inválido' }),
+  horario: z.enum([
+    '08:45', '09:00', '09:15', '09:30', '09:45', '10:00',
+    '10:15', '10:30', '10:45', '11:00', '11:15', '11:30',
+    '14:00', '14:15', '14:30', '14:45', '15:00', '15:15',
+    '15:30', '15:45', '16:00', '16:15', '16:30', '16:45'
+  ], { message: 'Horário inválido' }),
   cep: z.string().regex(/^\d{5}-?\d{3}$/, 'CEP inválido'),
   endereco: z.string().min(1, 'Endereço é obrigatório'),
   numero: z.string().min(1, 'Número é obrigatório'),
@@ -65,6 +71,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+
+    // Normalizar horário antes de validar (garante formato HH:MM)
+    if (body.horario) {
+      body.horario = normalizarHorario(body.horario)
+    }
 
     // Validar dados
     const validacao = novoAgendamentoSchema.safeParse(body)
