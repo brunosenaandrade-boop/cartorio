@@ -132,11 +132,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se motorista está disponível
+    // Usar maybeSingle() ao invés de single() para não lançar erro quando não encontrar
     const { data: indisponibilidade } = await supabase
       .from('motorista_indisponibilidades')
       .select('id')
       .eq('data', dados.data)
-      .single()
+      .maybeSingle()
 
     if (indisponibilidade) {
       return NextResponse.json(
@@ -146,13 +147,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se horário já está ocupado
+    // Usar maybeSingle() ao invés de single() para não lançar erro quando não encontrar
     const { data: agendamentoExistente } = await supabase
       .from('agendamentos')
       .select('id')
       .eq('data', dados.data)
       .eq('horario', dados.horario)
       .eq('status', 'agendado')
-      .single()
+      .maybeSingle()
 
     if (agendamentoExistente) {
       return NextResponse.json(
