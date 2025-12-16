@@ -65,7 +65,8 @@ export function CalendarioTab() {
   }, [])
 
   const hojeString = useMemo(() => {
-    return hoje.toISOString().split('T')[0]
+    // Usar hora local (não UTC) para evitar problemas de timezone
+    return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
   }, [hoje])
 
   useEffect(() => {

@@ -5,7 +5,9 @@ import { createServerClient } from '@/lib/supabase'
 export async function GET() {
   try {
     const supabase = createServerClient()
-    const hoje = new Date().toISOString().split('T')[0]
+    // Usar hora local (não UTC) para evitar problemas de timezone
+    const now = new Date()
+    const hoje = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
     // Buscar agendamentos pendentes (status = 'agendado')
     const { data: pendentes, error: pendentesError } = await supabase

@@ -101,8 +101,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se o horário já passou (para hoje)
+    // Usar hora local do Brasil (não UTC) para evitar problemas de timezone
     const hoje = new Date()
-    const hojeString = hoje.toISOString().split('T')[0]
+    const hojeString = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
 
     if (dados.data === hojeString) {
       const horaAtual = hoje.getHours()

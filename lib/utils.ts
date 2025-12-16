@@ -48,9 +48,9 @@ export function formatarData(data: string): string {
   return `${dia}/${mes}/${ano}`
 }
 
-// Formatar data para ISO (YYYY-MM-DD)
+// Formatar data para ISO (YYYY-MM-DD) - usando hora local, não UTC
 export function formatarDataISO(data: Date): string {
-  return data.toISOString().split('T')[0]
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`
 }
 
 // Formatar valor monetário (R$ 1.234,56)
