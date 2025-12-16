@@ -44,9 +44,18 @@ export function CalendarioTab() {
   const [loading, setLoading] = useState(true)
   const [diaModal, setDiaModal] = useState<DiaCalendario | null>(null)
   const [hoveredDia, setHoveredDia] = useState<string | null>(null)
+  const [minuteKey, setMinuteKey] = useState(0) // Para atualizar a cada minuto
 
   const ano = mesAtual.getFullYear()
   const mes = mesAtual.getMonth()
+
+  // Atualizar a cada minuto para manter horários passados atualizados
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMinuteKey(k => k + 1)
+    }, 60000) // 1 minuto
+    return () => clearInterval(interval)
+  }, [])
 
   // Data de hoje para comparação (sem hora)
   const hoje = useMemo(() => {
@@ -140,8 +149,11 @@ export function CalendarioTab() {
     return horariosAindaDisponiveis.length
   }
 
-  // Encontrar próximo slot disponível global
+  // Encontrar próximo slot disponível global (atualiza a cada minuto via minuteKey)
   const proximoDisponivel = useMemo(() => {
+    // minuteKey força recálculo a cada minuto
+    void minuteKey
+
     for (const dia of dias) {
       if (!dia.mesAtual) continue
       if (isDataPassada(dia.data)) continue
@@ -160,7 +172,7 @@ export function CalendarioTab() {
       }
     }
     return null
-  }, [dias, hojeString])
+  }, [dias, hojeString, minuteKey])
 
   const handleProximoDisponivel = () => {
     if (proximoDisponivel) {

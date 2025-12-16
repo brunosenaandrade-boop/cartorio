@@ -102,6 +102,14 @@ function NovoAgendamentoContent() {
           }
 
           setHorariosIndisponiveis(indisponiveis)
+
+          // Limpar horário selecionado se estiver indisponível
+          setFormData(prev => {
+            if (prev.horario && indisponiveis.includes(prev.horario)) {
+              return { ...prev, horario: '' as HorarioDisponivel }
+            }
+            return prev
+          })
         }
       }
     } catch (error) {
