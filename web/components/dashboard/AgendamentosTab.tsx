@@ -21,6 +21,7 @@ export function AgendamentosTab() {
   const [filtroStatus, setFiltroStatus] = useState<string>('todos')
   const [modalCancelar, setModalCancelar] = useState<Agendamento | null>(null)
   const [cancelando, setCancelando] = useState(false)
+  const [erroCancelamento, setErroCancelamento] = useState<string>('')
 
   useEffect(() => {
     carregarAgendamentos()
@@ -47,6 +48,7 @@ export function AgendamentosTab() {
     if (!modalCancelar) return
 
     setCancelando(true)
+    setErroCancelamento('')
     try {
       const response = await fetch(`/api/agendamentos/${modalCancelar.id}/cancelar`, {
         method: 'PATCH',
@@ -54,12 +56,17 @@ export function AgendamentosTab() {
         body: JSON.stringify({ cancelled_by: 'Escrevente' })
       })
 
-      if (response.ok) {
+      const data = await response.json()
+
+      if (response.ok && data.success) {
         setModalCancelar(null)
         carregarAgendamentos()
+      } else {
+        setErroCancelamento(data.error || 'Erro ao cancelar agendamento')
       }
     } catch (error) {
       console.error('Erro ao cancelar:', error)
+      setErroCancelamento('Erro de conexão. Tente novamente.')
     } finally {
       setCancelando(false)
     }
@@ -187,7 +194,10 @@ export function AgendamentosTab() {
       {/* Modal de Cancelamento */}
       <Modal
         isOpen={!!modalCancelar}
-        onClose={() => setModalCancelar(null)}
+        onClose={() => {
+          setModalCancelar(null)
+          setErroCancelamento('')
+        }}
         title="Cancelar Agendamento"
       >
         {modalCancelar && (
@@ -205,10 +215,24 @@ export function AgendamentosTab() {
               </div>
             </div>
 
+            {/* Mensagem de erro */}
+            {erroCancelamento && (
+              <div className="flex items-start gap-3 p-4 bg-red-50 rounded-xl mb-4 border border-red-200">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-red-800">
+                  <p className="font-medium">Erro ao cancelar</p>
+                  <p className="mt-1">{erroCancelamento}</p>
+                </div>
+              </div>
+            )}
+
             <ModalActions>
               <Button
                 variant="ghost"
-                onClick={() => setModalCancelar(null)}
+                onClick={() => {
+                  setModalCancelar(null)
+                  setErroCancelamento('')
+                }}
                 disabled={cancelando}
               >
                 Voltar

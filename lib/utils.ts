@@ -90,9 +90,8 @@ export function podeCancelar(data: string, horario: string): boolean {
   const agora = new Date()
   const dataAgendamento = new Date(data + 'T' + horario + ':00')
 
-  // Horário limite para cancelamento
-  const limiteMinutos = horario === '09:15' ? 30 : 30 // 30 minutos antes
-  const limiteMs = limiteMinutos * 60 * 1000
+  // Horário limite para cancelamento: 30 minutos antes
+  const limiteMs = 30 * 60 * 1000
 
   const horarioLimite = new Date(dataAgendamento.getTime() - limiteMs)
 
