@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,10 +13,14 @@ import {
   Ban,
   CheckCircle2,
   AlertCircle,
-  PartyPopper
+  PartyPopper,
+  Sparkles,
+  ArrowRight,
+  Zap
 } from 'lucide-react'
 import { Button } from '@/components/ui'
-import { getNomeMes, formatarData, HORARIOS_MANHA, HORARIOS_TARDE, HORARIOS_DISPONIVEIS } from '@/lib/utils'
+import { DiaDetalheModal } from './DiaDetalheModal'
+import { getNomeMes, formatarData, HORARIOS_MANHA, HORARIOS_TARDE, HORARIOS_DISPONIVEIS, getPeriodo } from '@/lib/utils'
 import { Agendamento, MotoristaIndisponibilidade, Feriado } from '@/types'
 
 interface DiaCalendario {
@@ -33,9 +38,12 @@ interface DiaCalendario {
 }
 
 export function CalendarioTab() {
+  const router = useRouter()
   const [mesAtual, setMesAtual] = useState(new Date())
   const [dias, setDias] = useState<DiaCalendario[]>([])
   const [loading, setLoading] = useState(true)
+  const [diaModal, setDiaModal] = useState<DiaCalendario | null>(null)
+  const [hoveredDia, setHoveredDia] = useState<string | null>(null)
 
   const ano = mesAtual.getFullYear()
   const mes = mesAtual.getMonth()
@@ -110,6 +118,12 @@ export function CalendarioTab() {
     return false
   }
 
+  // Retorna array de horários que já passaram para hoje
+  const getHorariosPassados = (dataString: string): string[] => {
+    if (dataString !== hojeString) return []
+    return HORARIOS_DISPONIVEIS.filter(h => isHorarioPassado(dataString, h))
+  }
+
   // Calcula slots disponíveis considerando horários que já passaram (para hoje)
   const getSlotsDisponiveis = (dia: DiaCalendario): number => {
     if (!dia.mesAtual || dia.feriado || dia.indisponivel || dia.diaSemana === 0 || dia.diaSemana === 6) {
@@ -126,6 +140,34 @@ export function CalendarioTab() {
     return horariosAindaDisponiveis.length
   }
 
+  // Encontrar próximo slot disponível global
+  const proximoDisponivel = useMemo(() => {
+    for (const dia of dias) {
+      if (!dia.mesAtual) continue
+      if (isDataPassada(dia.data)) continue
+      if (dia.feriado || dia.indisponivel) continue
+      if (dia.diaSemana === 0 || dia.diaSemana === 6) continue
+
+      const horariosPassados = getHorariosPassados(dia.data)
+      const disponiveis = dia.horariosDisponiveis.filter(h => !horariosPassados.includes(h))
+
+      if (disponiveis.length > 0) {
+        return {
+          data: dia.data,
+          horario: disponiveis[0],
+          dia: dia
+        }
+      }
+    }
+    return null
+  }, [dias, hojeString])
+
+  const handleProximoDisponivel = () => {
+    if (proximoDisponivel) {
+      router.push(`/dashboard/novo?data=${proximoDisponivel.data}&horario=${proximoDisponivel.horario}`)
+    }
+  }
+
   const getCorDia = (dia: DiaCalendario) => {
     // Data passada - sempre cinza escuro
     if (dia.mesAtual && isDataPassada(dia.data)) {
@@ -139,12 +181,12 @@ export function CalendarioTab() {
 
     // Feriado
     if (dia.feriado) {
-      return 'bg-purple-50 text-purple-600'
+      return 'bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all cursor-pointer'
     }
 
     // Indisponível (motorista)
     if (dia.indisponivel) {
-      return 'bg-gray-100 text-gray-500'
+      return 'bg-gray-100 text-gray-500 hover:bg-gray-150 transition-all cursor-pointer'
     }
 
     const slotsLivres = getSlotsDisponiveis(dia)
@@ -152,16 +194,16 @@ export function CalendarioTab() {
 
     // Todos os slots livres = DISPONÍVEL (verde)
     if (slotsLivres === totalSlots) {
-      return 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:shadow-md transition-all'
+      return 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer'
     }
 
     // Nenhum slot livre = LOTADO (vermelho)
     if (slotsLivres === 0) {
-      return 'bg-rose-50 text-rose-700'
+      return 'bg-rose-50 text-rose-700 hover:bg-rose-100 transition-all cursor-pointer'
     }
 
     // Alguns slots livres = PARCIAL (amarelo/laranja)
-    return 'bg-amber-50 text-amber-700 hover:bg-amber-100 hover:shadow-md transition-all'
+    return 'bg-amber-50 text-amber-700 hover:bg-amber-100 hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer'
   }
 
   const getStatusDia = (dia: DiaCalendario): { label: string; slots: number } => {
@@ -178,6 +220,11 @@ export function CalendarioTab() {
       label: slotsLivres > 0 ? `${slotsLivres} vaga${slotsLivres > 1 ? 's' : ''}` : 'Lotado',
       slots: slotsLivres
     }
+  }
+
+  const handleDiaClick = (dia: DiaCalendario) => {
+    if (!dia.mesAtual) return
+    setDiaModal(dia)
   }
 
   const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -212,6 +259,38 @@ export function CalendarioTab() {
         </Button>
       </div>
 
+      {/* Botão Próximo Disponível - DESTAQUE */}
+      {proximoDisponivel && !loading && (
+        <button
+          onClick={handleProximoDisponivel}
+          className="w-full group relative overflow-hidden bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-600 hover:via-emerald-700 hover:to-teal-700 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300"
+        >
+          {/* Efeito de brilho */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-white/20 rounded-xl group-hover:scale-110 transition-transform">
+                <Zap className="w-7 h-7 text-white" />
+              </div>
+              <div className="text-left">
+                <p className="text-white/80 text-sm font-medium">Agendamento Rápido</p>
+                <p className="text-white text-xl font-bold">
+                  {formatarData(proximoDisponivel.data)} às {proximoDisponivel.horario}
+                </p>
+                <p className="text-white/70 text-sm">
+                  {getPeriodo(proximoDisponivel.horario)} - Próximo horário disponível
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-white">
+              <span className="text-sm font-medium hidden sm:block">Agendar agora</span>
+              <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+            </div>
+          </div>
+        </button>
+      )}
+
       {/* Legenda Melhorada */}
       <div className="flex flex-wrap gap-3 p-4 bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-lg border border-emerald-200">
@@ -234,6 +313,12 @@ export function CalendarioTab() {
           <Clock className="w-4 h-4 text-gray-500" />
           <span className="text-sm font-medium text-gray-600">Passado/Indisponível</span>
         </div>
+      </div>
+
+      {/* Dica de interação */}
+      <div className="flex items-center justify-center gap-2 text-sm text-gray-500 bg-gray-50 rounded-xl p-3">
+        <Sparkles className="w-4 h-4 text-primary-500" />
+        <span>Clique em um dia para ver horários disponíveis e agendar</span>
       </div>
 
       {/* Grid do Calendário */}
@@ -266,15 +351,20 @@ export function CalendarioTab() {
               const passado = dia.mesAtual && isDataPassada(dia.data)
               const status = getStatusDia(dia)
               const ehDiaUtil = dia.diaSemana > 0 && dia.diaSemana < 6
+              const isHovered = hoveredDia === dia.data
+              const isClickable = dia.mesAtual
 
               return (
                 <div
                   key={index}
+                  onClick={() => handleDiaClick(dia)}
+                  onMouseEnter={() => dia.mesAtual && setHoveredDia(dia.data)}
+                  onMouseLeave={() => setHoveredDia(null)}
                   className={`
                     relative min-h-[110px] p-2 border-b border-r border-gray-100
                     ${!dia.mesAtual ? 'bg-gray-50/50' : getCorDia(dia)}
-                    ${dia.mesAtual && !passado && ehDiaUtil && !dia.feriado && !dia.indisponivel ? 'cursor-pointer' : 'cursor-default'}
                     ${eHoje ? 'ring-2 ring-primary-500 ring-inset z-10' : ''}
+                    ${isClickable ? 'cursor-pointer' : 'cursor-default'}
                   `}
                 >
                   {/* Número do dia */}
@@ -292,8 +382,9 @@ export function CalendarioTab() {
                     {/* Badge de vagas */}
                     {status.slots > 0 && !passado && (
                       <span className={`
-                        text-[10px] font-bold px-1.5 py-0.5 rounded-full
+                        text-[10px] font-bold px-1.5 py-0.5 rounded-full transition-transform
                         ${status.slots === HORARIOS_DISPONIVEIS.length ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}
+                        ${isHovered ? 'scale-110' : ''}
                       `}>
                         {status.slots}
                       </span>
@@ -375,6 +466,11 @@ export function CalendarioTab() {
                       <div className="w-full h-[1px] bg-gray-300 rotate-[-20deg]" />
                     </div>
                   )}
+
+                  {/* Indicador visual de hover */}
+                  {isHovered && dia.mesAtual && !passado && ehDiaUtil && !dia.feriado && !dia.indisponivel && (
+                    <div className="absolute inset-0 bg-primary-500/5 rounded-lg pointer-events-none" />
+                  )}
                 </div>
               )
             })}
@@ -387,6 +483,24 @@ export function CalendarioTab() {
         <div className="w-3 h-3 rounded-full bg-primary-500 animate-pulse" />
         <span>Hoje: {formatarData(hojeString)}</span>
       </div>
+
+      {/* Modal de detalhes do dia */}
+      {diaModal && (
+        <DiaDetalheModal
+          isOpen={!!diaModal}
+          onClose={() => setDiaModal(null)}
+          data={diaModal.data}
+          dia={diaModal.dia}
+          diaSemana={diaModal.diaSemana}
+          horariosOcupados={diaModal.horariosOcupados}
+          horariosDisponiveis={diaModal.horariosDisponiveis}
+          feriado={diaModal.feriado}
+          indisponivel={diaModal.indisponivel}
+          isPassado={isDataPassada(diaModal.data)}
+          isHoje={isHoje(diaModal.data)}
+          horariosPassados={getHorariosPassados(diaModal.data)}
+        />
+      )}
     </div>
   )
 }

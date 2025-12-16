@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,26 +12,26 @@ import {
   Clock,
   MapPin,
   FileText,
-  Loader2
+  Loader2,
+  AlertCircle
 } from 'lucide-react'
-import { Button, Input, Select, Textarea, Card, CardContent } from '@/components/ui'
+import { Button, Input, Textarea, Card, CardContent, TimeSlotPicker } from '@/components/ui'
 import { buscarCEP } from '@/lib/viacep'
-import { formatarCEP, formatarData } from '@/lib/utils'
+import { formatarCEP, formatarData, getPeriodo, HORARIOS_DISPONIVEIS } from '@/lib/utils'
 import { NovoAgendamentoForm, HorarioDisponivel } from '@/types'
 
 type Etapa = 'formulario' | 'confirmar' | 'sucesso'
 
-const horariosOptions = [
-  { value: '09:15', label: '09:15 - Manhã' },
-  { value: '15:00', label: '15:00 - Tarde' }
-]
-
-export default function NovoAgendamentoPage() {
+function NovoAgendamentoContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [etapa, setEtapa] = useState<Etapa>('formulario')
   const [loading, setLoading] = useState(false)
   const [buscandoCep, setBuscandoCep] = useState(false)
   const [erro, setErro] = useState('')
+  const [horariosIndisponiveis, setHorariosIndisponiveis] = useState<string[]>([])
+  const [carregandoHorarios, setCarregandoHorarios] = useState(false)
+  const [urlParamsProcessed, setUrlParamsProcessed] = useState(false)
 
   const [formData, setFormData] = useState<NovoAgendamentoForm>({
     escrevente_nome: '',
@@ -47,11 +47,86 @@ export default function NovoAgendamentoPage() {
     observacoes: ''
   })
 
+  // Processar parâmetros da URL (data e horário pré-selecionados)
+  useEffect(() => {
+    if (urlParamsProcessed) return
+
+    const dataParam = searchParams.get('data')
+    const horarioParam = searchParams.get('horario')
+
+    if (dataParam || horarioParam) {
+      setFormData(prev => ({
+        ...prev,
+        data: dataParam || prev.data,
+        horario: (horarioParam as HorarioDisponivel) || prev.horario
+      }))
+      setUrlParamsProcessed(true)
+    }
+  }, [searchParams, urlParamsProcessed])
+
+  // Buscar horários indisponíveis quando a data mudar
+  const buscarDisponibilidade = useCallback(async (data: string) => {
+    if (!data) {
+      setHorariosIndisponiveis([])
+      return
+    }
+
+    setCarregandoHorarios(true)
+    try {
+      const [ano, mes] = data.split('-')
+      const response = await fetch(`/api/calendario?ano=${ano}&mes=${mes}`)
+      const result = await response.json()
+
+      if (result.success) {
+        const diaInfo = result.dias.find((d: { data: string }) => d.data === data)
+        if (diaInfo) {
+          // Horários ocupados + horários que já passaram (para hoje)
+          const hoje = new Date()
+          const hojeString = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
+
+          let indisponiveis = [...(diaInfo.horariosOcupados || [])]
+
+          // Se for hoje, adicionar horários que já passaram
+          if (data === hojeString) {
+            const horaAtual = hoje.getHours()
+            const minutoAtual = hoje.getMinutes()
+
+            HORARIOS_DISPONIVEIS.forEach(horario => {
+              const [hora, minuto] = horario.split(':').map(Number)
+              if (horaAtual > hora || (horaAtual === hora && minutoAtual >= minuto)) {
+                if (!indisponiveis.includes(horario)) {
+                  indisponiveis.push(horario)
+                }
+              }
+            })
+          }
+
+          setHorariosIndisponiveis(indisponiveis)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar disponibilidade:', error)
+    } finally {
+      setCarregandoHorarios(false)
+    }
+  }, [])
+
+  // Buscar disponibilidade quando a data mudar
+  useEffect(() => {
+    if (formData.data) {
+      buscarDisponibilidade(formData.data)
+    }
+  }, [formData.data, buscarDisponibilidade])
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleHorarioChange = (horario: string) => {
+    setFormData(prev => ({ ...prev, horario: horario as HorarioDisponivel }))
   }
 
   const handleCEPChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -278,31 +353,56 @@ export default function NovoAgendamentoPage() {
                 />
               </div>
 
-              {/* Data e Horário */}
+              {/* Data */}
               <div className="space-y-4">
                 <h3 className="font-medium text-gray-900 flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-primary-500" />
-                  Data e Horário
+                  Data da Diligência
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    label="Data"
-                    type="date"
-                    name="data"
-                    value={formData.data}
-                    onChange={handleChange}
-                    min={dataMinima}
-                  />
-                  <Select
-                    label="Horário"
-                    name="horario"
-                    value={formData.horario}
-                    onChange={handleChange}
-                    options={horariosOptions}
-                    placeholder="Selecione o horário"
-                  />
-                </div>
+                <Input
+                  label="Selecione a data"
+                  type="date"
+                  name="data"
+                  value={formData.data}
+                  onChange={handleChange}
+                  min={dataMinima}
+                />
               </div>
+
+              {/* Horário - só mostra após selecionar data */}
+              {formData.data && (
+                <div className="space-y-4">
+                  <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-primary-500" />
+                    Horário da Diligência
+                    {carregandoHorarios && (
+                      <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                    )}
+                  </h3>
+
+                  {carregandoHorarios ? (
+                    <div className="flex items-center justify-center py-8 text-gray-500">
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      Carregando horários disponíveis...
+                    </div>
+                  ) : (
+                    <>
+                      <TimeSlotPicker
+                        value={formData.horario}
+                        onChange={handleHorarioChange}
+                        horariosIndisponiveis={horariosIndisponiveis}
+                      />
+
+                      {horariosIndisponiveis.length === 24 && (
+                        <div className="flex items-center gap-2 p-3 bg-rose-50 text-rose-700 rounded-lg text-sm">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          <span>Todos os horários estão ocupados nesta data. Por favor, escolha outra data.</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* Endereço */}
               <div className="space-y-4">
@@ -422,7 +522,7 @@ export default function NovoAgendamentoPage() {
                   <div>
                     <p className="text-sm text-gray-500">Horário</p>
                     <p className="font-medium">
-                      {formData.horario} ({formData.horario === '09:15' ? 'Manhã' : 'Tarde'})
+                      {formData.horario} ({getPeriodo(formData.horario)})
                     </p>
                   </div>
                 </div>
@@ -507,5 +607,18 @@ export default function NovoAgendamentoPage() {
         )}
       </main>
     </div>
+  )
+}
+
+// Wrapper com Suspense para useSearchParams
+export default function NovoAgendamentoPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen animated-gradient flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-white" />
+      </div>
+    }>
+      <NovoAgendamentoContent />
+    </Suspense>
   )
 }

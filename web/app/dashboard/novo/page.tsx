@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowLeft,
   ArrowRight,
@@ -22,14 +22,16 @@ import { NovoAgendamentoForm, HorarioDisponivel } from '@/types'
 
 type Etapa = 'formulario' | 'confirmar' | 'sucesso'
 
-export default function NovoAgendamentoPage() {
+function NovoAgendamentoContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [etapa, setEtapa] = useState<Etapa>('formulario')
   const [loading, setLoading] = useState(false)
   const [buscandoCep, setBuscandoCep] = useState(false)
   const [erro, setErro] = useState('')
   const [horariosIndisponiveis, setHorariosIndisponiveis] = useState<string[]>([])
   const [carregandoHorarios, setCarregandoHorarios] = useState(false)
+  const [urlParamsProcessed, setUrlParamsProcessed] = useState(false)
 
   const [formData, setFormData] = useState<NovoAgendamentoForm>({
     escrevente_nome: '',
@@ -44,6 +46,23 @@ export default function NovoAgendamentoPage() {
     estado: 'SC',
     observacoes: ''
   })
+
+  // Processar parâmetros da URL (data e horário pré-selecionados)
+  useEffect(() => {
+    if (urlParamsProcessed) return
+
+    const dataParam = searchParams.get('data')
+    const horarioParam = searchParams.get('horario')
+
+    if (dataParam || horarioParam) {
+      setFormData(prev => ({
+        ...prev,
+        data: dataParam || prev.data,
+        horario: (horarioParam as HorarioDisponivel) || prev.horario
+      }))
+      setUrlParamsProcessed(true)
+    }
+  }, [searchParams, urlParamsProcessed])
 
   // Buscar horários indisponíveis quando a data mudar
   const buscarDisponibilidade = useCallback(async (data: string) => {
@@ -96,8 +115,6 @@ export default function NovoAgendamentoPage() {
   useEffect(() => {
     if (formData.data) {
       buscarDisponibilidade(formData.data)
-      // Limpar horário selecionado se a data mudar
-      setFormData(prev => ({ ...prev, horario: '' as HorarioDisponivel }))
     }
   }, [formData.data, buscarDisponibilidade])
 
@@ -590,5 +607,18 @@ export default function NovoAgendamentoPage() {
         )}
       </main>
     </div>
+  )
+}
+
+// Wrapper com Suspense para useSearchParams
+export default function NovoAgendamentoPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen animated-gradient flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-white" />
+      </div>
+    }>
+      <NovoAgendamentoContent />
+    </Suspense>
   )
 }
