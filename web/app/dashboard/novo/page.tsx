@@ -262,6 +262,8 @@ function NovoAgendamentoContent() {
     setErro('')
 
     try {
+      console.log('[FORM] Enviando dados:', JSON.stringify(formData))
+
       const response = await fetch('/api/agendamentos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -269,14 +271,20 @@ function NovoAgendamentoContent() {
       })
 
       const data = await response.json()
+      console.log('[FORM] Resposta:', JSON.stringify(data))
 
-      if (response.ok) {
+      if (response.ok && data.success) {
         setEtapa('sucesso')
       } else {
-        setErro(data.error || 'Erro ao criar agendamento')
+        // Mostrar erro detalhado se disponível
+        const errorMsg = data.details
+          ? `${data.error} (${data.details})`
+          : data.error || 'Erro ao criar agendamento'
+        setErro(errorMsg)
         setEtapa('formulario')
       }
-    } catch {
+    } catch (err) {
+      console.error('[FORM] Erro de conexão:', err)
       setErro('Erro de conexão. Tente novamente.')
       setEtapa('formulario')
     } finally {

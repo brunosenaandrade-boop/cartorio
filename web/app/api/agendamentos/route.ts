@@ -71,15 +71,18 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    console.log('[AGENDAMENTO] Dados recebidos:', JSON.stringify(body))
 
     // Normalizar horário antes de validar (garante formato HH:MM)
     if (body.horario) {
       body.horario = normalizarHorario(body.horario)
+      console.log('[AGENDAMENTO] Horário normalizado:', body.horario)
     }
 
     // Validar dados
     const validacao = novoAgendamentoSchema.safeParse(body)
     if (!validacao.success) {
+      console.log('[AGENDAMENTO] Erro de validação:', validacao.error.errors)
       return NextResponse.json(
         { success: false, error: validacao.error.errors[0].message },
         { status: 400 }
@@ -87,6 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     const dados = validacao.data
+    console.log('[AGENDAMENTO] Dados validados:', JSON.stringify(dados))
     const supabase = createServerClient()
 
     // Verificar se data é dia útil (não fim de semana)
@@ -164,6 +168,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Criar agendamento
+    console.log('[AGENDAMENTO] Inserindo no banco...')
     const { data: novoAgendamento, error } = await supabase
       .from('agendamentos')
       .insert([{
@@ -173,7 +178,12 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('[AGENDAMENTO] Erro do Supabase:', error)
+      throw error
+    }
+
+    console.log('[AGENDAMENTO] Criado com sucesso:', novoAgendamento.id)
 
     // Criar log de agendamento criado
     await supabase
@@ -186,19 +196,28 @@ export async function POST(request: NextRequest) {
       }])
 
     // Enviar email de notificação (não bloqueia a resposta)
-    enviarEmailNovoAgendamento(novoAgendamento).catch(console.error)
+    enviarEmailNovoAgendamento(novoAgendamento).catch(err => console.error('[AGENDAMENTO] Erro email:', err))
 
     // Enviar push notification para o motorista (não bloqueia a resposta)
-    notificarNovoAgendamento(novoAgendamento).catch(console.error)
+    notificarNovoAgendamento(novoAgendamento).catch(err => console.error('[AGENDAMENTO] Erro push:', err))
 
     return NextResponse.json(
       { success: true, data: novoAgendamento },
       { status: 201 }
     )
   } catch (error) {
-    console.error('Erro ao criar agendamento:', error)
+    console.error('[AGENDAMENTO] Erro ao criar:', error)
+
+    // Retornar mensagem de erro mais específica
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+    const supabaseError = (error as { code?: string; details?: string })
+
     return NextResponse.json(
-      { success: false, error: 'Erro ao criar agendamento' },
+      {
+        success: false,
+        error: `Erro ao criar agendamento: ${errorMessage}`,
+        details: supabaseError.code || supabaseError.details || undefined
+      },
       { status: 500 }
     )
   }
