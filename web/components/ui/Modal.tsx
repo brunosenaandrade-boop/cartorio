@@ -30,11 +30,10 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-50 overflow-y-auto">
-        <div className="min-h-full flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className={cn(
-              'w-full bg-white rounded-2xl shadow-2xl animate-slide-up relative',
+              'w-full bg-white rounded-2xl shadow-2xl animate-slide-up relative max-h-[90vh] overflow-y-auto',
               sizes[size]
             )}
             onClick={(e) => e.stopPropagation()}
@@ -57,7 +56,6 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
               {children}
             </div>
           </div>
-        </div>
       </div>
     </Fragment>
   )
