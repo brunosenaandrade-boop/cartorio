@@ -69,17 +69,26 @@ export async function GET(request: NextRequest) {
 
 // POST - Criar novo agendamento
 export async function POST(request: NextRequest) {
+  console.log('[AGENDAMENTO] Iniciando POST...')
   try {
     const body = await request.json()
+    console.log('[AGENDAMENTO] Dados recebidos:', JSON.stringify(body))
 
     // Normalizar horário antes de validar (garante formato HH:MM)
     if (body.horario) {
-      body.horario = normalizarHorario(body.horario)
+      const horarioOriginal = body.horario
+      const horarioNormalizado = normalizarHorario(body.horario)
+      // Só substitui se a normalização retornar algo válido
+      if (horarioNormalizado) {
+        body.horario = horarioNormalizado
+      }
+      console.log('[AGENDAMENTO] Horário original:', horarioOriginal, '-> normalizado:', body.horario)
     }
 
     // Validar dados
     const validacao = novoAgendamentoSchema.safeParse(body)
     if (!validacao.success) {
+      console.log('[AGENDAMENTO] Erro de validação:', validacao.error.errors)
       return NextResponse.json(
         { success: false, error: validacao.error.errors[0].message },
         { status: 400 }
@@ -87,6 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     const dados = validacao.data
+    console.log('[AGENDAMENTO] Dados validados:', JSON.stringify(dados))
     const supabase = createServerClient()
 
     // Verificar se data é dia útil (não fim de semana)
@@ -101,12 +111,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se o horário já passou (para hoje)
-    const hoje = new Date()
-    const hojeString = hoje.toISOString().split('T')[0]
+    // Usar hora local do Brasil (UTC-3) - cálculo manual para compatibilidade
+    const agora = new Date()
+    // Brasília = UTC-3 (3 horas a menos que UTC)
+    const offsetBrasilia = -3 * 60 // em minutos
+    const offsetLocal = agora.getTimezoneOffset() // em minutos (positivo para oeste de UTC)
+    const diffMinutos = offsetLocal + offsetBrasilia
+    const horasBrasil = new Date(agora.getTime() + diffMinutos * 60 * 1000)
+
+    const hojeString = `${horasBrasil.getUTCFullYear()}-${String(horasBrasil.getUTCMonth() + 1).padStart(2, '0')}-${String(horasBrasil.getUTCDate()).padStart(2, '0')}`
 
     if (dados.data === hojeString) {
-      const horaAtual = hoje.getHours()
-      const minutoAtual = hoje.getMinutes()
+      const horaAtual = horasBrasil.getUTCHours()
+      const minutoAtual = horasBrasil.getUTCMinutes()
 
       const [horaAgendamento, minutoAgendamento] = dados.horario.split(':').map(Number)
 
@@ -131,11 +148,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se motorista está disponível
-    const { data: indisponibilidade } = await supabase
+    console.log('[AGENDAMENTO] Verificando indisponibilidade...')
+    const { data: indisponibilidade, error: errIndispo } = await supabase
       .from('motorista_indisponibilidades')
       .select('id')
       .eq('data', dados.data)
-      .single()
+      .maybeSingle()
+
+    if (errIndispo) {
+      console.error('[AGENDAMENTO] Erro ao verificar indisponibilidade:', errIndispo)
+    }
 
     if (indisponibilidade) {
       return NextResponse.json(
@@ -145,13 +167,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se horário já está ocupado
-    const { data: agendamentoExistente } = await supabase
+    console.log('[AGENDAMENTO] Verificando horário ocupado...')
+    const { data: agendamentoExistente, error: errExistente } = await supabase
       .from('agendamentos')
       .select('id')
       .eq('data', dados.data)
       .eq('horario', dados.horario)
       .eq('status', 'agendado')
-      .single()
+      .maybeSingle()
+
+    if (errExistente) {
+      console.error('[AGENDAMENTO] Erro ao verificar existente:', errExistente)
+    }
 
     if (agendamentoExistente) {
       return NextResponse.json(
@@ -161,6 +188,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Criar agendamento
+    console.log('[AGENDAMENTO] Inserindo no banco...', JSON.stringify({ ...dados, status: 'agendado' }))
     const { data: novoAgendamento, error } = await supabase
       .from('agendamentos')
       .insert([{
@@ -170,7 +198,12 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('[AGENDAMENTO] Erro do Supabase ao inserir:', JSON.stringify(error))
+      throw error
+    }
+
+    console.log('[AGENDAMENTO] Criado com sucesso:', novoAgendamento.id)
 
     // Criar log de agendamento criado
     await supabase
@@ -183,19 +216,29 @@ export async function POST(request: NextRequest) {
       }])
 
     // Enviar email de notificação (não bloqueia a resposta)
-    enviarEmailNovoAgendamento(novoAgendamento).catch(console.error)
+    enviarEmailNovoAgendamento(novoAgendamento).catch(err => console.error('[AGENDAMENTO] Erro email:', err))
 
     // Enviar push notification para o motorista (não bloqueia a resposta)
-    notificarNovoAgendamento(novoAgendamento).catch(console.error)
+    notificarNovoAgendamento(novoAgendamento).catch(err => console.error('[AGENDAMENTO] Erro push:', err))
 
     return NextResponse.json(
       { success: true, data: novoAgendamento },
       { status: 201 }
     )
   } catch (error) {
-    console.error('Erro ao criar agendamento:', error)
+    console.error('[AGENDAMENTO] Erro ao criar:', error)
+
+    // Retornar mensagem de erro mais específica
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+    const supabaseError = (error as { code?: string; details?: string })
+
     return NextResponse.json(
-      { success: false, error: 'Erro ao criar agendamento' },
+      {
+        success: false,
+        error: `Erro ao criar agendamento: ${errorMessage}`,
+        details: supabaseError.code || supabaseError.details || undefined,
+        _v: 'v3'
+      },
       { status: 500 }
     )
   }
