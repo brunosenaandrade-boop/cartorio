@@ -27,16 +27,31 @@ function formatarDiaSemana(data: string): string {
   return dias[dataObj.getDay()]
 }
 
-function formatarHorario(horario: string): string {
-  return horario === '09:15' ? '09:15' : '15:00'
+function formatarDiaSemanaAbrev(data: string): string {
+  const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+  const dataObj = new Date(data + 'T12:00:00')
+  return dias[dataObj.getDay()]
 }
 
 function formatarPeriodo(horario: string): string {
-  return horario === '09:15' ? 'Manhã' : 'Tarde'
+  const hora = parseInt(horario.split(':')[0])
+  return hora < 12 ? 'Manhã' : 'Tarde'
 }
 
-// Template base do email
-function getEmailTemplate(content: string, headerColor: string, headerIcon: string, headerTitle: string): string {
+// SVG Icons (inline para máxima compatibilidade)
+const icons = {
+  calendar: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`,
+  clock: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
+  mapPin: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
+  user: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`,
+  check: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
+  x: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+  bell: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`,
+  fileText: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`,
+}
+
+// Template base do email - Design minimalista e moderno
+function getEmailTemplate(content: string, accentColor: string, headerIcon: string, headerTitle: string): string {
   return `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -45,19 +60,21 @@ function getEmailTemplate(content: string, headerColor: string, headerIcon: stri
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${headerTitle}</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f4f4f5;">
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc;">
     <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+      <td align="center" style="padding: 48px 24px;">
 
-          <!-- Header -->
+        <!-- Main Container -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 520px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);">
+
+          <!-- Header Icon -->
           <tr>
-            <td style="background: linear-gradient(135deg, ${headerColor} 0%, ${adjustColor(headerColor, -20)} 100%); padding: 40px 40px 30px 40px; text-align: center;">
-              <div style="width: 70px; height: 70px; background-color: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 20px auto; text-align: center; line-height: 70px;">
-                <span style="font-size: 32px; vertical-align: middle;">${headerIcon}</span>
+            <td style="padding: 48px 48px 24px 48px; text-align: center;">
+              <div style="width: 64px; height: 64px; margin: 0 auto 16px auto; background-color: ${accentColor}10; border-radius: 50%; text-align: center; line-height: 64px;">
+                ${headerIcon}
               </div>
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1e293b; letter-spacing: -0.025em;">
                 ${headerTitle}
               </h1>
             </td>
@@ -65,41 +82,27 @@ function getEmailTemplate(content: string, headerColor: string, headerIcon: stri
 
           <!-- Content -->
           <tr>
-            <td style="padding: 40px;">
+            <td style="padding: 0 48px 48px 48px;">
               ${content}
             </td>
           </tr>
 
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #f8fafc; padding: 30px 40px; border-top: 1px solid #e2e8f0;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td style="text-align: center;">
-                    <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px;">
-                      Sistema de Agendamento de Diligências
-                    </p>
-                    <p style="margin: 0; color: #94a3b8; font-size: 12px;">
-                      Este é um email automático. Por favor, não responda diretamente.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
         </table>
 
-        <!-- Sub-footer -->
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0">
+        <!-- Footer -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 520px;">
           <tr>
-            <td style="padding: 20px; text-align: center;">
-              <p style="margin: 0; color: #94a3b8; font-size: 11px;">
-                © ${new Date().getFullYear()} 2º Tabelionato de Notas. Todos os direitos reservados.
+            <td style="padding: 32px 24px; text-align: center;">
+              <p style="margin: 0 0 8px 0; font-size: 13px; color: #64748b;">
+                2º Tabelionato de Notas
+              </p>
+              <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                Este é um email automático. Por favor, não responda.
               </p>
             </td>
           </tr>
         </table>
+
       </td>
     </tr>
   </table>
@@ -108,30 +111,66 @@ function getEmailTemplate(content: string, headerColor: string, headerIcon: stri
   `
 }
 
-function adjustColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace('#', ''), 16)
-  const amt = Math.round(2.55 * percent)
-  const R = (num >> 16) + amt
-  const G = (num >> 8 & 0x00FF) + amt
-  const B = (num & 0x0000FF) + amt
-  return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1)
+// Card de data/horário em destaque
+function getDateTimeCard(data: string, horario: string, accentColor: string): string {
+  const diaSemana = formatarDiaSemanaAbrev(data)
+  const [dia, mes, ano] = formatarData(data).split('/')
+  const periodo = formatarPeriodo(horario)
+
+  return `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
+      <tr>
+        <td style="padding: 20px; background-color: ${accentColor}08; border-radius: 12px; border: 1px solid ${accentColor}20;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+            <tr>
+              <!-- Data -->
+              <td width="50%" style="text-align: center; border-right: 1px solid ${accentColor}20; padding-right: 16px;">
+                <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 500; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
+                  ${diaSemana}
+                </p>
+                <p style="margin: 0; font-size: 32px; font-weight: 700; color: #1e293b; line-height: 1;">
+                  ${dia}
+                </p>
+                <p style="margin: 4px 0 0 0; font-size: 14px; color: #64748b;">
+                  ${mes}/${ano}
+                </p>
+              </td>
+              <!-- Horário -->
+              <td width="50%" style="text-align: center; padding-left: 16px;">
+                <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 500; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
+                  ${periodo}
+                </p>
+                <p style="margin: 0; font-size: 32px; font-weight: 700; color: #1e293b; line-height: 1;">
+                  ${horario}
+                </p>
+                <p style="margin: 4px 0 0 0; font-size: 14px; color: #64748b;">
+                  horário
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  `
 }
 
-function getInfoRow(icon: string, label: string, value: string): string {
+// Linha de informação minimalista
+function getInfoLine(icon: string, label: string, value: string, color: string = '#64748b'): string {
   return `
     <tr>
       <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9;">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
           <tr>
-            <td width="40" style="vertical-align: top;">
-              <span style="font-size: 20px;">${icon}</span>
+            <td width="32" style="vertical-align: middle; color: ${color};">
+              ${icon}
             </td>
-            <td style="vertical-align: top;">
-              <p style="margin: 0 0 2px 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
-                ${label}
-              </p>
-              <p style="margin: 0; color: #1e293b; font-size: 16px; font-weight: 500;">
+            <td style="vertical-align: middle; padding-left: 12px;">
+              <p style="margin: 0; font-size: 14px; color: #1e293b;">
                 ${value}
+              </p>
+              <p style="margin: 2px 0 0 0; font-size: 12px; color: #94a3b8;">
+                ${label}
               </p>
             </td>
           </tr>
@@ -159,48 +198,32 @@ export async function enviarEmailNovoAgendamento(agendamento: Agendamento, email
 
   const complemento = agendamento.complemento ? `, ${agendamento.complemento}` : ''
   const enderecoCompleto = `${agendamento.endereco}, ${agendamento.numero}${complemento}`
-  const cidadeEstado = `${agendamento.bairro} - ${agendamento.cidade}/${agendamento.estado}`
+  const cidadeEstado = `${agendamento.bairro}, ${agendamento.cidade}/${agendamento.estado}`
 
   const content = `
-    <!-- Success Badge -->
-    <div style="text-align: center; margin-bottom: 30px;">
-      <span style="display: inline-block; background-color: #dcfce7; color: #166534; padding: 8px 20px; border-radius: 50px; font-size: 14px; font-weight: 500;">
-        ✓ Agendamento Confirmado
-      </span>
-    </div>
-
-    <!-- Greeting -->
-    <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
-      Um novo agendamento de diligência foi registrado com sucesso. Confira os detalhes abaixo:
+    <!-- Mensagem -->
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #475569; line-height: 1.6; text-align: center;">
+      Uma nova diligência foi agendada com sucesso.
     </p>
 
-    <!-- Info Card -->
-    <div style="background-color: #f8fafc; border-radius: 12px; padding: 25px; margin-bottom: 25px;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-        ${getInfoRow('👤', 'Escrevente', agendamento.escrevente_nome)}
-        ${getInfoRow('📅', 'Data', `${formatarDiaSemana(agendamento.data)}, ${formatarData(agendamento.data)}`)}
-        ${getInfoRow('🕐', 'Horário', `${formatarHorario(agendamento.horario)} (${formatarPeriodo(agendamento.horario)})`)}
-        ${getInfoRow('📍', 'Endereço', enderecoCompleto)}
-        ${getInfoRow('🏙️', 'Localidade', cidadeEstado)}
-        ${getInfoRow('📮', 'CEP', agendamento.cep)}
-        ${agendamento.observacoes ? getInfoRow('📝', 'Observações', agendamento.observacoes) : ''}
-      </table>
-    </div>
+    <!-- Card Data/Horário -->
+    ${getDateTimeCard(agendamento.data, agendamento.horario, '#3b82f6')}
 
-    <!-- CTA -->
-    <div style="text-align: center; margin-top: 30px;">
-      <p style="color: #64748b; font-size: 14px; margin: 0;">
-        Em caso de dúvidas ou necessidade de alteração, entre em contato conosco.
-      </p>
-    </div>
+    <!-- Detalhes -->
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+      ${getInfoLine(icons.user, 'Escrevente', agendamento.escrevente_nome, '#3b82f6')}
+      ${getInfoLine(icons.mapPin, 'Endereço', enderecoCompleto, '#3b82f6')}
+      ${getInfoLine(icons.mapPin, 'Localidade', cidadeEstado, '#3b82f6')}
+      ${agendamento.observacoes ? getInfoLine(icons.fileText, 'Observações', agendamento.observacoes, '#3b82f6') : ''}
+    </table>
   `
 
   try {
     const { data, error } = await getResendClient().emails.send({
       from: getFromEmail(),
       to: destinatarios,
-      subject: `✅ Novo Agendamento - ${formatarData(agendamento.data)} às ${formatarHorario(agendamento.horario)}`,
-      html: getEmailTemplate(content, '#2563eb', '📋', 'Novo Agendamento'),
+      subject: `Nova Diligência - ${formatarData(agendamento.data)} às ${agendamento.horario}`,
+      html: getEmailTemplate(content, '#3b82f6', icons.check, 'Agendamento Confirmado'),
     })
 
     if (error) {
@@ -234,37 +257,37 @@ export async function enviarEmailCancelamento(agendamento: Agendamento, motivoCa
 
   const complemento = agendamento.complemento ? `, ${agendamento.complemento}` : ''
   const enderecoCompleto = `${agendamento.endereco}, ${agendamento.numero}${complemento}`
-  const cidadeEstado = `${agendamento.bairro} - ${agendamento.cidade}/${agendamento.estado}`
 
   const content = `
-    <!-- Cancel Badge -->
-    <div style="text-align: center; margin-bottom: 30px;">
-      <span style="display: inline-block; background-color: #fee2e2; color: #991b1b; padding: 8px 20px; border-radius: 50px; font-size: 14px; font-weight: 500;">
-        ✕ Agendamento Cancelado
-      </span>
-    </div>
-
-    <!-- Message -->
-    <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
-      O agendamento abaixo foi cancelado. Confira os detalhes:
+    <!-- Mensagem -->
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #475569; line-height: 1.6; text-align: center;">
+      A diligência abaixo foi cancelada.
     </p>
 
-    <!-- Info Card -->
-    <div style="background-color: #fef2f2; border-radius: 12px; padding: 25px; margin-bottom: 25px; border-left: 4px solid #ef4444;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-        ${getInfoRow('👤', 'Escrevente', agendamento.escrevente_nome)}
-        ${getInfoRow('📅', 'Data', `${formatarDiaSemana(agendamento.data)}, ${formatarData(agendamento.data)}`)}
-        ${getInfoRow('🕐', 'Horário', `${formatarHorario(agendamento.horario)} (${formatarPeriodo(agendamento.horario)})`)}
-        ${getInfoRow('📍', 'Endereço', enderecoCompleto)}
-        ${getInfoRow('🏙️', 'Localidade', cidadeEstado)}
-        ${motivoCancelamento ? getInfoRow('❌', 'Motivo do Cancelamento', motivoCancelamento) : ''}
-      </table>
-    </div>
+    <!-- Card Data/Horário -->
+    ${getDateTimeCard(agendamento.data, agendamento.horario, '#ef4444')}
 
-    <!-- Notice -->
-    <div style="background-color: #fffbeb; border-radius: 8px; padding: 15px; border-left: 4px solid #f59e0b;">
-      <p style="color: #92400e; font-size: 14px; margin: 0;">
-        <strong>Atenção:</strong> O horário está novamente disponível para novos agendamentos.
+    <!-- Detalhes -->
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+      ${getInfoLine(icons.user, 'Escrevente', agendamento.escrevente_nome, '#ef4444')}
+      ${getInfoLine(icons.mapPin, 'Endereço', enderecoCompleto, '#ef4444')}
+      ${motivoCancelamento ? `
+        <tr>
+          <td style="padding: 16px 0 0 0;">
+            <div style="padding: 12px 16px; background-color: #fef2f2; border-radius: 8px; border-left: 3px solid #ef4444;">
+              <p style="margin: 0; font-size: 13px; color: #991b1b;">
+                <strong>Motivo:</strong> ${motivoCancelamento}
+              </p>
+            </div>
+          </td>
+        </tr>
+      ` : ''}
+    </table>
+
+    <!-- Aviso -->
+    <div style="margin-top: 24px; padding: 12px 16px; background-color: #fffbeb; border-radius: 8px;">
+      <p style="margin: 0; font-size: 13px; color: #92400e; text-align: center;">
+        O horário está novamente disponível para novos agendamentos.
       </p>
     </div>
   `
@@ -273,8 +296,8 @@ export async function enviarEmailCancelamento(agendamento: Agendamento, motivoCa
     const { data, error } = await getResendClient().emails.send({
       from: getFromEmail(),
       to: destinatarios,
-      subject: `❌ Agendamento Cancelado - ${formatarData(agendamento.data)} às ${formatarHorario(agendamento.horario)}`,
-      html: getEmailTemplate(content, '#dc2626', '🚫', 'Agendamento Cancelado'),
+      subject: `Diligência Cancelada - ${formatarData(agendamento.data)} às ${agendamento.horario}`,
+      html: getEmailTemplate(content, '#ef4444', icons.x, 'Agendamento Cancelado'),
     })
 
     if (error) {
@@ -308,54 +331,40 @@ export async function enviarEmailLembrete(agendamento: Agendamento, emailDestina
 
   const complemento = agendamento.complemento ? `, ${agendamento.complemento}` : ''
   const enderecoCompleto = `${agendamento.endereco}, ${agendamento.numero}${complemento}`
-  const cidadeEstado = `${agendamento.bairro} - ${agendamento.cidade}/${agendamento.estado}`
+  const cidadeEstado = `${agendamento.bairro}, ${agendamento.cidade}/${agendamento.estado}`
 
   const content = `
-    <!-- Reminder Badge -->
-    <div style="text-align: center; margin-bottom: 30px;">
-      <span style="display: inline-block; background-color: #fef3c7; color: #92400e; padding: 8px 20px; border-radius: 50px; font-size: 14px; font-weight: 500;">
-        ⏰ Lembrete de Diligência
+    <!-- Badge Destaque -->
+    <div style="margin-bottom: 24px; text-align: center;">
+      <span style="display: inline-block; padding: 8px 20px; background-color: #fef3c7; color: #92400e; font-size: 14px; font-weight: 600; border-radius: 50px;">
+        Diligência Amanhã
       </span>
     </div>
 
-    <!-- Highlight Box -->
-    <div style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 12px; padding: 25px; margin-bottom: 25px; text-align: center;">
-      <p style="color: #ffffff; font-size: 18px; font-weight: 600; margin: 0 0 5px 0;">
-        Diligência Amanhã!
-      </p>
-      <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0;">
-        Não esqueça do compromisso agendado
-      </p>
-    </div>
-
-    <!-- Message -->
-    <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
-      Este é um lembrete sobre a diligência agendada para amanhã. Confira os detalhes:
+    <!-- Mensagem -->
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #475569; line-height: 1.6; text-align: center;">
+      Este é um lembrete sobre a diligência agendada para amanhã.
     </p>
 
-    <!-- Info Card -->
-    <div style="background-color: #fffbeb; border-radius: 12px; padding: 25px; margin-bottom: 25px; border-left: 4px solid #f59e0b;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-        ${getInfoRow('👤', 'Escrevente', agendamento.escrevente_nome)}
-        ${getInfoRow('📅', 'Data', `${formatarDiaSemana(agendamento.data)}, ${formatarData(agendamento.data)}`)}
-        ${getInfoRow('🕐', 'Horário', `${formatarHorario(agendamento.horario)} (${formatarPeriodo(agendamento.horario)})`)}
-        ${getInfoRow('📍', 'Endereço', enderecoCompleto)}
-        ${getInfoRow('🏙️', 'Localidade', cidadeEstado)}
-        ${getInfoRow('📮', 'CEP', agendamento.cep)}
-        ${agendamento.observacoes ? getInfoRow('📝', 'Observações', agendamento.observacoes) : ''}
-      </table>
-    </div>
+    <!-- Card Data/Horário -->
+    ${getDateTimeCard(agendamento.data, agendamento.horario, '#f59e0b')}
 
-    <!-- Tips -->
-    <div style="background-color: #f0fdf4; border-radius: 8px; padding: 15px;">
-      <p style="color: #166534; font-size: 14px; margin: 0 0 10px 0; font-weight: 600;">
-        💡 Dicas para o dia:
+    <!-- Detalhes -->
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+      ${getInfoLine(icons.user, 'Escrevente', agendamento.escrevente_nome, '#f59e0b')}
+      ${getInfoLine(icons.mapPin, 'Endereço', enderecoCompleto, '#f59e0b')}
+      ${getInfoLine(icons.mapPin, 'Localidade', cidadeEstado, '#f59e0b')}
+      ${agendamento.observacoes ? getInfoLine(icons.fileText, 'Observações', agendamento.observacoes, '#f59e0b') : ''}
+    </table>
+
+    <!-- Dicas -->
+    <div style="margin-top: 24px; padding: 16px; background-color: #f0fdf4; border-radius: 8px;">
+      <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #166534;">
+        Lembrete:
       </p>
-      <ul style="color: #166534; font-size: 14px; margin: 0; padding-left: 20px;">
-        <li style="margin-bottom: 5px;">Verifique o trajeto com antecedência</li>
-        <li style="margin-bottom: 5px;">Leve todos os documentos necessários</li>
-        <li>Chegue com alguns minutos de antecedência</li>
-      </ul>
+      <p style="margin: 0; font-size: 13px; color: #166534; line-height: 1.5;">
+        Verifique o trajeto e chegue com antecedência.
+      </p>
     </div>
   `
 
@@ -363,8 +372,8 @@ export async function enviarEmailLembrete(agendamento: Agendamento, emailDestina
     const { data, error } = await getResendClient().emails.send({
       from: getFromEmail(),
       to: destinatarios,
-      subject: `⏰ Lembrete: Diligência Amanhã - ${formatarData(agendamento.data)} às ${formatarHorario(agendamento.horario)}`,
-      html: getEmailTemplate(content, '#f59e0b', '🔔', 'Lembrete de Diligência'),
+      subject: `Lembrete: Diligência Amanhã - ${formatarData(agendamento.data)} às ${agendamento.horario}`,
+      html: getEmailTemplate(content, '#f59e0b', icons.bell, 'Lembrete de Diligência'),
     })
 
     if (error) {
