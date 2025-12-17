@@ -245,7 +245,7 @@ export function AgendamentosTab() {
                 Confirmar Cancelamento
               </Button>
             </ModalActions>
-          </>
+          </div>
         )}
       </Modal>
     </div>
