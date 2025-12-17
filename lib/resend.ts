@@ -54,8 +54,8 @@ function getEmailTemplate(content: string, headerColor: string, headerIcon: stri
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, ${headerColor} 0%, ${adjustColor(headerColor, -20)} 100%); padding: 40px 40px 30px 40px; text-align: center;">
-              <div style="width: 70px; height: 70px; background-color: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 20px auto; display: flex; align-items: center; justify-content: center;">
-                <span style="font-size: 32px;">${headerIcon}</span>
+              <div style="width: 70px; height: 70px; background-color: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 20px auto; text-align: center; line-height: 70px;">
+                <span style="font-size: 32px; vertical-align: middle;">${headerIcon}</span>
               </div>
               <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">
                 ${headerTitle}
