@@ -2,7 +2,11 @@
 
 export type StatusAgendamento = 'agendado' | 'concluido' | 'cancelado'
 
-export type HorarioDisponivel = '09:15' | '15:00'
+export type HorarioDisponivel =
+  | '08:45' | '09:00' | '09:15' | '09:30' | '09:45' | '10:00'
+  | '10:15' | '10:30' | '10:45' | '11:00' | '11:15' | '11:30'
+  | '14:00' | '14:15' | '14:30' | '14:45' | '15:00' | '15:15'
+  | '15:30' | '15:45' | '16:00' | '16:15' | '16:30' | '16:45'
 
 export interface Agendamento {
   id: string
